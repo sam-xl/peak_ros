@@ -1,30 +1,23 @@
-#include "peak_nodelet.h"
+#include "peak_ros/peak_nodelet.h"
 
 
 namespace peak_namespace {
 
-PeakNodelet::PeakNodelet()
-  : rate_(10),
-    ns_("/peak"), // TODO: Figure out how to get this when using nodelets so it isn't hardcoded
+PeakNodelet::PeakNodelet() : rclcpp::Node("peak_node"),
+    ns_("peak"),
     peak_handler_(),
     stream_(false)
 {
-}
+    RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Initialising node...");
 
-
-void PeakNodelet::onInit()
-{
-    NODELET_INFO_STREAM(node_name_ << ": Initialising node...");
-
-    ros::NodeHandle &nh_ = getMTNodeHandle();
-    node_name_ = getName();
+    node_name_ = get_name();
     //ns_ = ros::this_node::getNamespace();
-    package_path_ = ros::package::getPath("peak_ros");
+    package_path_ = ament_index_cpp::get_package_share_directory("peak_ros");
     peak_handler_.setup(
-                        PeakNodelet::paramHandler(ns_ + "/settings/acquisition_rate", acquisition_rate_),
-                        PeakNodelet::paramHandler(ns_ + "/settings/peak_address", peak_address_),
-                        PeakNodelet::paramHandler(ns_ + "/settings/peak_port", peak_port_),
-                        package_path_ + "/mps/" + PeakNodelet::paramHandler(ns_ + "/settings/mps_file", mps_file_)
+                        PeakNodelet::paramHandler("acquisition_rate", acquisition_rate_),
+                        PeakNodelet::paramHandler("peak_address", peak_address_),
+                        PeakNodelet::paramHandler("peak_port", peak_port_),
+                        package_path_ + "/mps/" + PeakNodelet::paramHandler("mps_file", mps_file_)
                         );
 
    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -32,22 +25,21 @@ void PeakNodelet::onInit()
    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ltpa_data_ptr_ = peak_handler_.ltpa_data_ptr();
 
-    rate_ = ros::Rate(acquisition_rate_);
-    PeakNodelet::paramHandler(ns_ + "/settings/digitisation_rate", digitisation_rate_);
-    PeakNodelet::paramHandler(ns_ + "/settings/profile", profile_);
+    PeakNodelet::paramHandler("digitisation_rate", digitisation_rate_);
+    PeakNodelet::paramHandler("profile", profile_);
 
-    PeakNodelet::paramHandler(ns_ + "/settings/tcg/use_tcg", use_tcg_);
-    PeakNodelet::paramHandler(ns_ + "/settings/tcg/amp_factor", amp_factor_);
-    PeakNodelet::paramHandler(ns_ + "/settings/tcg/depth_factor", depth_factor_);
-    PeakNodelet::paramHandler(ns_ + "/settings/tcg/tcg_limit", tcg_limit_);
+    PeakNodelet::paramHandler("tcg.use_tcg", use_tcg_);
+    PeakNodelet::paramHandler("tcg.amp_factor", amp_factor_);
+    PeakNodelet::paramHandler("tcg.depth_factor", depth_factor_);
+    PeakNodelet::paramHandler("tcg.tcg_limit", tcg_limit_);
     depth_factor_ = depth_factor_ * 0.001f;
 
-    PeakNodelet::paramHandler(ns_ + "/settings/gates/gate_front_wall", gate_front_wall_);
-    PeakNodelet::paramHandler(ns_ + "/settings/gates/depth_to_skip", depth_to_skip_);
-    PeakNodelet::paramHandler(ns_ + "/settings/gates/gate_back_wall", gate_back_wall_);
-    PeakNodelet::paramHandler(ns_ + "/settings/gates/max_depth", max_depth_);
-    PeakNodelet::paramHandler(ns_ + "/settings/gates/zero_to_front_wall", zero_to_front_wall_);
-    PeakNodelet::paramHandler(ns_ + "/settings/gates/show_front_wall", show_front_wall_);
+    PeakNodelet::paramHandler("gates.gate_front_wall", gate_front_wall_);
+    PeakNodelet::paramHandler("gates.depth_to_skip", depth_to_skip_);
+    PeakNodelet::paramHandler("gates.gate_back_wall", gate_back_wall_);
+    PeakNodelet::paramHandler("gates.max_depth", max_depth_);
+    PeakNodelet::paramHandler("gates.zero_to_front_wall", zero_to_front_wall_);
+    PeakNodelet::paramHandler("gates.show_front_wall", show_front_wall_);
     depth_to_skip_ = depth_to_skip_ * 0.001f;
     max_depth_ = max_depth_ * 0.001f;
 
@@ -57,48 +49,55 @@ void PeakNodelet::onInit()
     prePopulateBScanMessage();
     prePopulateGatedBScanMessage();
 
-    ascan_publisher_ =        nh_.advertise<peak_ros::Observation>(ns_ + "/a_scans", 100, true);
-    bscan_publisher_ =        nh_.advertise<sensor_msgs::PointCloud2>(ns_ + "/b_scan", 100, true);
-    gated_bscan_publisher_ =  nh_.advertise<sensor_msgs::PointCloud2>(ns_ + "/gated_b_scan", 100, true);
+    ascan_publisher_ =        this->create_publisher<peak_ros::msg::Observation>(ns_ + "/a_scans", 100);
+    bscan_publisher_ =        this->create_publisher<sensor_msgs::msg::PointCloud2>(ns_ + "/b_scan", 100);
+    gated_bscan_publisher_ =  this->create_publisher<sensor_msgs::msg::PointCloud2>(ns_ + "/gated_b_scan", 100);
 
-    single_measure_service_ = nh_.advertiseService(ns_ + "/take_single_measurement", &PeakNodelet::takeMeasurementSrvCb, this);
-    stream_service_ =         nh_.advertiseService(ns_ + "/stream_data", &PeakNodelet::streamDataSrvCb, this);
+    single_measure_service_ = this->create_service<peak_ros::srv::TakeSingleMeasurement>(ns_ + "/take_single_measurement", std::bind(&PeakNodelet::takeMeasurementSrvCb, this, 
+                std::placeholders::_1, std::placeholders::_2));
+    stream_service_ =         this->create_service<peak_ros::srv::StreamData>(ns_ + "/stream_data", std::bind(&PeakNodelet::streamDataSrvCb, this, 
+                std::placeholders::_1, std::placeholders::_2));
 
-    timer_ = nh_.createTimer(ros::Duration(1.0l / (double)acquisition_rate_), &PeakNodelet::timerCb, this);
+    timer_ = this->create_wall_timer(std::chrono::nanoseconds(1000000000 / acquisition_rate_), std::bind(&PeakNodelet::timerCb, this));
 
-    NODELET_INFO_STREAM(node_name_ << ": Node initialised");
+    RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Node initialised");
 }
 
 
 //PeakNodelet::~PeakNodelet() {
 //}
 
-
 template <typename ParamType>
 ParamType PeakNodelet::paramHandler(std::string param_name, ParamType& param_value) {
-    while (!nh_.hasParam(param_name)) {
-        NODELET_INFO_STREAM_THROTTLE(10, node_name_ << ": Waiting for parameter " << param_name);
+    if (this->has_parameter(param_name))
+    {
+        param_value = this->get_parameter(param_name).get_value<ParamType>();
     }
-    nh_.getParam(param_name, param_value);
-    NODELET_DEBUG_STREAM(node_name_ << ": Read in parameter " << param_name << " = " << param_value);
+    else
+    {
+        param_value =  this->declare_parameter(param_name, param_value);
+    }
+
+    RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Read in parameter " << param_name << " = " << param_value);
+
     return param_value;
 }
 
 
 void PeakNodelet::initHardware() {
-    NODELET_INFO_STREAM(node_name_ << ": Initialising Peak hardware...");
+    RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Initialising Peak hardware...");
 
     peak_handler_.connect();
     peak_handler_.sendReset(digitisation_rate_);
     peak_handler_.readMpsFile();
     peak_handler_.sendMpsConfiguration();
 
-    NODELET_INFO_STREAM(node_name_ << ": Peak hardware initialised");
+    RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Peak hardware initialised");
 }
 
 
 void PeakNodelet::prePopulateAScanMessage() {
-    PeakNodelet::paramHandler(ns_ + "/settings/frame_id", ltpa_msg_.header.frame_id);
+    PeakNodelet::paramHandler("frame_id", ltpa_msg_.header.frame_id);
 
     // Get settings the PeakHandler extracted from the .mps file
     ltpa_msg_.dof = peak_handler_.dof_;
@@ -111,17 +110,17 @@ void PeakNodelet::prePopulateAScanMessage() {
     ltpa_msg_.digitisation_rate = ltpa_data_ptr_->digitisation_rate;
 
     // TODO: Consider sending this as a separate one time latched message rather than repeated here
-    PeakNodelet::paramHandler(ns_ + "/settings/boundary_conditions/n_elements", ltpa_msg_.n_elements);
-    PeakNodelet::paramHandler(ns_ + "/settings/boundary_conditions/element_pitch", ltpa_msg_.element_pitch);
-    PeakNodelet::paramHandler(ns_ + "/settings/boundary_conditions/inter_element_spacing", ltpa_msg_.inter_element_spacing);
-    PeakNodelet::paramHandler(ns_ + "/settings/boundary_conditions/element_width", ltpa_msg_.element_width);
-    PeakNodelet::paramHandler(ns_ + "/settings/boundary_conditions/vel_wedge", ltpa_msg_.vel_wedge);
-    PeakNodelet::paramHandler(ns_ + "/settings/boundary_conditions/vel_couplant", ltpa_msg_.vel_couplant);
-    PeakNodelet::paramHandler(ns_ + "/settings/boundary_conditions/vel_material", ltpa_msg_.vel_material);
-    PeakNodelet::paramHandler(ns_ + "/settings/boundary_conditions/wedge_angle", ltpa_msg_.wedge_angle);
-    PeakNodelet::paramHandler(ns_ + "/settings/boundary_conditions/wedge_depth", ltpa_msg_.wedge_depth);
-    PeakNodelet::paramHandler(ns_ + "/settings/boundary_conditions/couplant_depth", ltpa_msg_.couplant_depth);
-    PeakNodelet::paramHandler(ns_ + "/settings/boundary_conditions/specimen_depth", ltpa_msg_.specimen_depth);
+    PeakNodelet::paramHandler("boundary_conditions.n_elements", ltpa_msg_.n_elements);
+    PeakNodelet::paramHandler("boundary_conditions.element_pitch", ltpa_msg_.element_pitch);
+    PeakNodelet::paramHandler("boundary_conditions.inter_element_spacing", ltpa_msg_.inter_element_spacing);
+    PeakNodelet::paramHandler("boundary_conditions.element_width", ltpa_msg_.element_width);
+    PeakNodelet::paramHandler("boundary_conditions.vel_wedge", ltpa_msg_.vel_wedge);
+    PeakNodelet::paramHandler("boundary_conditions.vel_couplant", ltpa_msg_.vel_couplant);
+    PeakNodelet::paramHandler("boundary_conditions.vel_material", ltpa_msg_.vel_material);
+    PeakNodelet::paramHandler("boundary_conditions.wedge_angle", ltpa_msg_.wedge_angle);
+    PeakNodelet::paramHandler("boundary_conditions.wedge_depth", ltpa_msg_.wedge_depth);
+    PeakNodelet::paramHandler("boundary_conditions.couplant_depth", ltpa_msg_.couplant_depth);
+    PeakNodelet::paramHandler("boundary_conditions.specimen_depth", ltpa_msg_.specimen_depth);
 
     // Not entirely necessary as implemented here but we can pass these back to the peak_handler
     peak_handler_.setReconstructionConfiguration(
@@ -147,10 +146,10 @@ void PeakNodelet::prePopulateBScanMessage() {
     sensor_msgs::PointCloud2Modifier bscan_cloud_modifier(bscan_cloud_);
     bscan_cloud_modifier.setPointCloud2Fields(
         fields,
-        "x", 1,          sensor_msgs::PointField::FLOAT32,
-        "y", 1,          sensor_msgs::PointField::FLOAT32,
-        "z", 1,          sensor_msgs::PointField::FLOAT32,
-        "Amplitudes", 1, sensor_msgs::PointField::FLOAT32
+        "x", 1,          sensor_msgs::msg::PointField::FLOAT32,
+        "y", 1,          sensor_msgs::msg::PointField::FLOAT32,
+        "z", 1,          sensor_msgs::msg::PointField::FLOAT32,
+        "Amplitudes", 1, sensor_msgs::msg::PointField::FLOAT32
         );
     bscan_cloud_.height = 1;
     bscan_cloud_.is_dense = true;
@@ -165,11 +164,11 @@ void PeakNodelet::prePopulateGatedBScanMessage() {
     sensor_msgs::PointCloud2Modifier gated_bscan_cloud_modifier(gated_bscan_cloud_);
     gated_bscan_cloud_modifier.setPointCloud2Fields(
         fields,
-        "x", 1,            sensor_msgs::PointField::FLOAT32,
-        "y", 1,            sensor_msgs::PointField::FLOAT32,
-        "z", 1,            sensor_msgs::PointField::FLOAT32,
-        "Amplitudes", 1,   sensor_msgs::PointField::FLOAT32,
-        "TimeofFlight", 1, sensor_msgs::PointField::FLOAT32
+        "x", 1,            sensor_msgs::msg::PointField::FLOAT32,
+        "y", 1,            sensor_msgs::msg::PointField::FLOAT32,
+        "z", 1,            sensor_msgs::msg::PointField::FLOAT32,
+        "Amplitudes", 1,   sensor_msgs::msg::PointField::FLOAT32,
+        "TimeofFlight", 1, sensor_msgs::msg::PointField::FLOAT32
         );
     gated_bscan_cloud_.height = 1;
     gated_bscan_cloud_.is_dense = true;
@@ -177,30 +176,30 @@ void PeakNodelet::prePopulateGatedBScanMessage() {
 }
 
 
-bool PeakNodelet::streamDataSrvCb(peak_ros::StreamData::Request& request,
-                                  peak_ros::StreamData::Response& response) {
-    NODELET_INFO_STREAM(node_name_ << ": Streaming request received: " << request.stream_data);
-    if (request.stream_data) {
+bool PeakNodelet::streamDataSrvCb(const peak_ros::srv::StreamData::Request::SharedPtr request,
+                                  peak_ros::srv::StreamData::Response::SharedPtr response) {
+    RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Streaming request received: " << request->stream_data);
+    if (request->stream_data) {
         stream_ = true;
-        response.success = true;
+        response->success = true;
         return true;
     } else {
         stream_ = false;
-        response.success = true;
+        response->success = true;
         return true;
     }
 }
 
 
-bool PeakNodelet::takeMeasurementSrvCb(peak_ros::TakeSingleMeasurement::Request& request,
-                                       peak_ros::TakeSingleMeasurement::Response& response) {
-    NODELET_INFO_STREAM(node_name_ << ": Take single measurement request received: " << request.take_single_measurement);
-    if (request.take_single_measurement) {
+bool PeakNodelet::takeMeasurementSrvCb(const peak_ros::srv::TakeSingleMeasurement::Request::SharedPtr request,
+                                       peak_ros::srv::TakeSingleMeasurement::Response::SharedPtr response) {
+    RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Take single measurement request received: " << request->take_single_measurement);
+    if (request->take_single_measurement) {
         takeMeasurement();
-        response.success = true;
+        response->success = true;
         return true;
     } else {
-        response.success = false;
+        response->success = false;
         return true;
     }
 }
@@ -239,7 +238,7 @@ void PeakNodelet::takeMeasurement() {
         }
 
         // ~0.4ms
-        ascan_publisher_.publish(ltpa_msg_);
+        ascan_publisher_->publish(ltpa_msg_);
 
         if (profile_) {
             end_3 = std::chrono::high_resolution_clock::now();
@@ -258,7 +257,7 @@ void PeakNodelet::takeMeasurement() {
             std::cout << "\033[0m";
         }
         
-        bscan_publisher_.publish(bscan_cloud_);
+        bscan_publisher_->publish(bscan_cloud_);
 
         if (profile_) {
             end_5 = std::chrono::high_resolution_clock::now();
@@ -267,7 +266,7 @@ void PeakNodelet::takeMeasurement() {
             std::cout << "\033[0m";
         }
 
-        gated_bscan_publisher_.publish(gated_bscan_cloud_);
+        gated_bscan_publisher_->publish(gated_bscan_cloud_);
     }
 
     if (profile_) {
@@ -280,11 +279,11 @@ void PeakNodelet::takeMeasurement() {
 
 
 void PeakNodelet::populateAScanMessage() {
-    ltpa_msg_.header.stamp = ros::Time::now();
+    ltpa_msg_.header.stamp = this->get_clock()->now();
     ltpa_msg_.ascans.clear();
 
     for (auto ascan : ltpa_data_ptr_->ascans) {
-        peak_ros::Ascan ascan_msg;
+        peak_ros::msg::Ascan ascan_msg;
         ascan_msg.count = ascan.header.count;
         ascan_msg.test_number = ascan.header.testNo;
         ascan_msg.dof = ascan.header.dof;
@@ -297,7 +296,7 @@ void PeakNodelet::populateAScanMessage() {
 }
 
 
-void PeakNodelet::populateBScanMessage(const peak_ros::Observation& obs_msg) {
+void PeakNodelet::populateBScanMessage(const peak_ros::msg::Observation &obs_msg) {
     bscan_cloud_.header.stamp = obs_msg.header.stamp;
     bscan_cloud_.header.frame_id = obs_msg.header.frame_id;
     bscan_cloud_.width = obs_msg.ascan_length * obs_msg.num_ascans;
@@ -468,17 +467,15 @@ void PeakNodelet::populateBScanMessage(const peak_ros::Observation& obs_msg) {
 }
 
 
-void PeakNodelet::timerCb(const ros::TimerEvent& /*event*/){
-    NODELET_INFO_STREAM_THROTTLE(600, node_name_ << ": Node running");
+void PeakNodelet::timerCb(){
+    RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 600, node_name_ << ": Node running");
     if (stream_) {
-        NODELET_INFO_STREAM_THROTTLE(60, node_name_ << ": Streaming data...");
+        RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 60, node_name_ << ": Streaming data...");
         takeMeasurement();
     } else {
-        NODELET_INFO_STREAM_THROTTLE(60, node_name_ << ": Not streaming data...");
+        RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 60, node_name_ << ": Not streaming data...");
     }
 }
 
 
 } // namespace peak_namespace
-
-PLUGINLIB_EXPORT_CLASS(peak_namespace::PeakNodelet, nodelet::Nodelet);
