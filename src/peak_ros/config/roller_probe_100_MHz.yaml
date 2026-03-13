@@ -1,4 +1,4 @@
-peak_node:
+peak/peak_node:
   ros__parameters:
     peak_address:    "10.1.1.2"
     peak_port:             1067
@@ -44,8 +44,11 @@ peak_node:
       zero_to_front_wall: false     # Sets the gated B Scan to start at the detected frontwall
       show_front_wall:    false     # Show front wall in the gated B Scan
 
-    reconstruction:
-      process_rate:          20 # Hz - Consider interplay between this and acquisition rates
-      use_tf:              true
-      recon_frame_id: "pcl_crop_box_2"
-      live_publish:        true
+peak/reconstruction_node:
+  ros__parameters:
+    process_rate:          20 # Hz - Consider interplay between this and acquisition rates
+    use_tf:              false
+    recon_frame_id: "pcl_crop_box_2"
+    live_publish:        true
+    recon_const_vel:     0.01
+    flip_direction:      true

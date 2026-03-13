@@ -61,7 +61,7 @@ include_directories(
 add_library(
   ${PROJECT_NAME}_lib
   src/peak_nodelet.cpp
-#  src/reconstruction_nodelet.cpp
+  src/reconstruction_nodelet.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}_lib
@@ -91,11 +91,11 @@ target_link_libraries(peak_node
 # Reconstruction Node #
 #######################
 
-#add_executable(reconstruction_node src/reconstruction_node.cpp)
+add_executable(reconstruction_node src/reconstruction_node.cpp)
 
-#target_link_libraries(peak_node
-  #${PROJECT_NAME}_lib
-#)
+target_link_libraries(reconstruction_node
+  ${PROJECT_NAME}_lib
+)
 
 #############
 ## Install ##
@@ -107,7 +107,7 @@ install(TARGETS
 )
 
 install(TARGETS
-  peak_node #reconstruction_node
+  peak_node reconstruction_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

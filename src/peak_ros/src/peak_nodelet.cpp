@@ -4,14 +4,13 @@
 namespace peak_namespace {
 
 PeakNodelet::PeakNodelet() : rclcpp::Node("peak_node"),
-    ns_("peak"),
     peak_handler_(),
     stream_(false)
 {
     RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Initialising node...");
 
     node_name_ = get_name();
-    //ns_ = ros::this_node::getNamespace();
+    ns_ = get_namespace();
     package_path_ = ament_index_cpp::get_package_share_directory("peak_ros");
     peak_handler_.setup(
                         PeakNodelet::paramHandler("acquisition_rate", acquisition_rate_),
@@ -468,12 +467,12 @@ void PeakNodelet::populateBScanMessage(const peak_ros::msg::Observation &obs_msg
 
 
 void PeakNodelet::timerCb(){
-    RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 600, node_name_ << ": Node running");
+    RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 600000, node_name_ << ": Node running");
     if (stream_) {
-        RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 60, node_name_ << ": Streaming data...");
+        RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 60000, node_name_ << ": Streaming data...");
         takeMeasurement();
     } else {
-        RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 60, node_name_ << ": Not streaming data...");
+        RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 60000, node_name_ << ": Not streaming data...");
     }
 }
 

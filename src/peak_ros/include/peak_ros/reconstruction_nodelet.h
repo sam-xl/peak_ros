@@ -12,43 +12,41 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
 #include "peak_ros/srv/stream_data.hpp"
 
-
 namespace reconstruction_namespace {
 
-class ReconstructionNodelet : public nodelet::Nodelet
+class ReconstructionNodelet : public rclcpp::Node
 {
 public:
     explicit                                ReconstructionNodelet();
 
 private:
-    virtual void                            onInit();
     template <typename ParamType>
     ParamType                               paramHandler(std::string param_name, ParamType& param_value);
     void                                    initialisePointcloud();
-    void                                    callback(const sensor_msgs::PointCloud2::ConstPtr& msg);
-    bool                                    publishSrvCb(peak_ros::StreamData::Request& request,
-                                                         peak_ros::StreamData::Response& response);
-    void                                    timerCb(const ros::TimerEvent& event);
+    void                                    callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
+    bool                                    publishSrvCb(const peak_ros::srv::StreamData::Request::SharedPtr request,
+                                                         peak_ros::srv::StreamData::Response::SharedPtr response);
+    void                                    timerCb();
 
-    ros::NodeHandle                         nh_;
     int32_t                                 rate_;
     std::string                             node_name_;
     std::string                             ns_;
 
-    ros::Subscriber                         subscriber_;
+    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr   subscriber_;
 
-    ros::ServiceServer                      publish_service_;
-    ros::Publisher                          publisher_;
+    rclcpp::Service<peak_ros::srv::StreamData>::SharedPtr            publish_service_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr      publisher_;
 
-    ros::Timer                              timer_;
+    rclcpp::TimerBase::SharedPtr            timer_;
 
-    sensor_msgs::PointCloud2                point_cloud_;
-    std::deque<sensor_msgs::PointCloud2>    buffer_;
+    sensor_msgs::msg::PointCloud2           point_cloud_;
+    std::deque<sensor_msgs::msg::PointCloud2> buffer_;
 
     bool                                    use_tf_;
     uint32_t                                b_scan_count_;
@@ -57,12 +55,12 @@ private:
     bool                                    live_publish_;
     double                                  recon_const_vel_;
     bool                                    flip_direction_;
-    ros::Time                               prev_observation_time_;
+    rclcpp::Time                            prev_observation_time_;
 
     // TF
-    tf2_ros::Buffer                         tfBuffer_;
-    tf2_ros::TransformListener              tfListener_;
-    geometry_msgs::TransformStamped         trans_;
+    std::shared_ptr<tf2_ros::TransformListener> tfListener_;
+    std::unique_ptr<tf2_ros::Buffer>        tfBuffer_;
+    geometry_msgs::msg::TransformStamped    trans_;
 };
 
 } // namespace reconstruction_namespace
