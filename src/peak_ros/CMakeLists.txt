@@ -46,6 +46,7 @@ rosidl_generate_interfaces(
   "msg/Observation.msg"
   "srv/StreamData.srv"
   "srv/TakeSingleMeasurement.srv"
+  "srv/SendCommand.srv"
   DEPENDENCIES
   std_msgs
 )

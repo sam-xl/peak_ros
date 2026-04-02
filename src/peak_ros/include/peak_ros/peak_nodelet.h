@@ -18,6 +18,7 @@
 
 #include "peak_ros/srv/stream_data.hpp"
 #include "peak_ros/srv/take_single_measurement.hpp"
+#include "peak_ros/srv/send_command.hpp"
 
 namespace peak_namespace {
 
@@ -40,6 +41,9 @@ private:
   bool takeMeasurementSrvCb(
       const peak_ros::srv::TakeSingleMeasurement::Request::SharedPtr request,
       peak_ros::srv::TakeSingleMeasurement::Response::SharedPtr response);
+  bool sendCommandSrvCb(
+      const peak_ros::srv::SendCommand::Request::SharedPtr request,
+      peak_ros::srv::SendCommand::Response::SharedPtr response);
   void takeMeasurement();
   void populateAScanMessage();
   void populateBScanMessage(const peak_ros::msg::Observation &obs_msg);
@@ -90,6 +94,7 @@ private:
   rclcpp::Service<peak_ros::srv::TakeSingleMeasurement>::SharedPtr
       single_measure_service_;
   rclcpp::Service<peak_ros::srv::StreamData>::SharedPtr stream_service_;
+  rclcpp::Service<peak_ros::srv::SendCommand>::SharedPtr send_command_service_;
 
   rclcpp::TimerBase::SharedPtr timer_;
 };

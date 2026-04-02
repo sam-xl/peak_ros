@@ -64,6 +64,11 @@ PeakNodelet::PeakNodelet()
       std::bind(&PeakNodelet::streamDataSrvCb, this, std::placeholders::_1,
                 std::placeholders::_2));
 
+  send_command_service_ = this->create_service<peak_ros::srv::SendCommand>(
+      ns_ + "/send_command",
+      std::bind(&PeakNodelet::sendCommandSrvCb, this, std::placeholders::_1,
+                std::placeholders::_2));
+
   timer_ = this->create_wall_timer(
       std::chrono::nanoseconds(1000000000 / acquisition_rate_),
       std::bind(&PeakNodelet::timerCb, this));
@@ -215,6 +220,29 @@ bool PeakNodelet::takeMeasurementSrvCb(
     response->success = false;
     return true;
   }
+}
+
+bool PeakNodelet::sendCommandSrvCb(
+    const peak_ros::srv::SendCommand::Request::SharedPtr request,
+    peak_ros::srv::SendCommand::Response::SharedPtr response) {
+  RCLCPP_INFO_STREAM(this->get_logger(),
+                     node_name_
+                         << ": Sending command: "
+                         << request->command);
+  peak_handler_.sendCommand(request->command);
+
+  // Update packet length if necessary
+  if (request->command.rfind("GATS", 0) == 0)
+  {
+    peak_handler_.setGates(request->command);
+    peak_handler_.calcPacketLength();
+    prePopulateAScanMessage();
+    prePopulateBScanMessage();
+    prePopulateGatedBScanMessage();
+  }
+
+  response->success = true;
+  return true;
 }
 
 void PeakNodelet::takeMeasurement() {
