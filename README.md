@@ -1,45 +1,37 @@
-[![docker_ci](https://github.com/MShields1986/peak_ros/actions/workflows/industrial_ci_action.yml/badge.svg)](https://github.com/MShields1986/peak_ros/actions/workflows/industrial_ci_action.yml)
+[![docker_ci](https://github.com/sam-xl/peak_ros/actions/workflows/industrial_ci_action.yml/badge.svg)](https://github.com/sam-xl/peak_ros/actions/workflows/industrial_ci_action.yml)
 
 # peak_ros
-ROS driver for use with PEAK MicroPulse devices.
+ROS2 driver for use with PEAK MicroPulse devices.
 
 ## Installation
-
-### Docker
-```bash
-git clone https://github.com/MShields1986/peak_ros.git
-cd peak_ros
-./run.sh
-```
 
 ### ROS Workspace
 This package depends on tf2-sensor-msgs.
 
 ```bash
-sudo apt update
-sudo apt install ros-noetic-tf2-sensor-msgs
-cd catkin_ws/src
-git clone https://github.com/MShields1986/peak_ros.git
+cd ros2_ws/src
+git clone https://github.com/sam-xl/peak_ros.git
+rosdep install --from-paths peak_ros --ignore-src
 cd ..
-catkin build
+colcon build
 ```
 
 ## Usage
 
 ```bash
-roslaunch peak_ros init.launch
+ros2 launch peak_ros capture.launch
 ```
 
 Call either of the services `/peak/take_single_measurement` or `/peak/stream_data`.
 
 ```bash
-rosservice call /peak/take_single_measurement "take_single_measurement: true"
+ros2 service call /peak/take_single_measurement peak_ros/srv/TakeSingleMeasurement "take_single_measurement: true"
 ```
 
 ...or...
 
 ```bash
-rosservice call /peak/stream_data "stream_data: true"
+ros2 service call /peak/stream_data peak_ros/srv/StreamData "stream_data: true"
 ```
 
 After this RViz ought to show the current b scan as a pointcloud on `/peak/b_scan`.

@@ -1,4 +1,4 @@
-Header header
+std_msgs/Header header
 
 # LTPA Configuration
 int32 dof

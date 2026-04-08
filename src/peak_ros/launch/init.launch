@@ -16,75 +16,44 @@
     <arg name="rviz" default="true" />
 
 
-    <group ns="peak">
-        <!-- Configuration -->
-        <group ns="settings">
-            <param name="mps_file" type="string" value="$(arg mps_file)" />
-            <rosparam file="$(find peak_ros)/config/$(arg configuration)" command="load" />
-        </group>
+    <group>
+        <push_ros_namespace namespace="peak"/>
 
-
-        <!-- Nodelet Manager -->
-        <node pkg="nodelet" type="nodelet" name="peak_nodelet_manager" args="manager" output="screen" >
-            <param name="num_worker_threads" value="15" />
+        <node pkg="peak_ros" exec="peak_node" name="peak_node" output="screen">
+            <param name="mps_file" value="$(var mps_file)" />
+            <param from="$(find-pkg-share peak_ros)/config/$(var configuration)" />
         </node>
 
-
-        <!-- Launch Peak LTPA Nodelet
-             Threads:
-                2 services
-                2 publishers
-                1 spin (1 TCP connections which will need dedicated threads outside of nodelet pool) 
-            -->
-        <node pkg="nodelet" type="nodelet" name="peak_ros_nodelet" 
-              args="load peak_ros/peak_nodelet peak_nodelet_manager">
+       <node pkg="pcl_ros" exec="filter_voxel_grid_node" name="voxel_grid" output="screen">
+            <remap from="input" to="gated_b_scan" />
+            <remap from="output" to="voxelised_gated_b_scan" />
+            <param name="filter_field_name" value="z"/>
+            <param name="filter_limit_min" value="0.0001"/>
+            <param name="filter_limit_max" value="0.05"/>
+            <param name="filter_limit_negative" value="False"/>
+            <param name="leaf_size" value="0.0001"/>
+            <param name="min_points_per_voxel" value="1"/>
         </node>
 
-
-        <!-- Voxel Nodelet
-             Threads:
-                1 subscriber
-                1 publisher
-                1 spin 
-            -->
-       <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid peak_nodelet_manager" output="screen">
-            <remap from="~input" to="gated_b_scan" />
-            <remap from="~output" to="voxelised_gated_b_scan" />
-            <rosparam>
-            filter_field_name: z
-            filter_limit_min: 0.0001
-            filter_limit_max: 0.05
-            filter_limit_negative: False
-            leaf_size: 0.0001
-            </rosparam>
-            <!-- leaf_size: 0.00005 -->
-        </node>
-
-
-        <!-- Reconstruction Nodelet
-             Threads:
-                1 subscriber
-                1 publisher
-                1 spin 
-            -->
-        <node pkg="nodelet" type="nodelet" name="reconstruction_nodelet" 
-              args="load peak_ros/reconstruction_nodelet peak_nodelet_manager" output="screen">
+        <node pkg="peak_ros" exec="reconstruction_node" name="reconstruction_node" output="screen">
             <remap from="input" to="voxelised_gated_b_scan" />
             <remap from="output" to="detections" />
+            <param from="$(find-pkg-share peak_ros)/config/$(var configuration)" />
         </node>
 
-
         <!-- PCD Exporter -->
-        <node pkg="pcl_ros" type="pointcloud_to_pcd" name="peak_pointcloud_to_pcd" args="input:=/peak/detections _prefix:=$(find peak_ros)/bags/" if="$(arg export_pcd)" />
-
+        <node pkg="pcl_ros" exec="pointcloud_to_pcd" name="peak_pointcloud_to_pcd" if="$(var export_pcd)">
+          <remap from="input" to="/peak/detections" />
+          <param name="prefix" value="$(find-pkg-share peak_ros)/bags/" />
+        </node>
 
         <!-- Logging -->
-        <node pkg="rosbag" type="record" name="rosbag_peak" args="record --repeat-latched -b 1024 -o $(find peak_ros)/bags/$(arg rosbag_name) /tf /peak/a_scans /peak/b_scan /peak/gated_b_scan /peak/detections /iiwa/state/CartesianWrench" if="$(arg logging)" />
+        <executable cmd="ros2 bag record --repeat-latched -b 1024 -o $(find-pkg-share peak_ros)/bags/$(var rosbag_name) /tf /peak/a_scans /peak/b_scan /peak/gated_b_scan /peak/detections /iiwa/state/CartesianWrench" if="$(var logging)" output="screen"/>
         
     </group>
 
 
     <!-- Rviz -->
-    <node pkg="rviz" type="rviz" name="rviz_peak" args="-d $(find peak_ros)/config/bscan.rviz" if="$(arg rviz)" />
+    <node pkg="rviz2" exec="rviz2" name="rviz_peak" args="-d $(find-pkg-share peak_ros)/config/bscan.rviz" if="$(var rviz)" />
 
 </launch>
