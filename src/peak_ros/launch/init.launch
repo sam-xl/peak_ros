@@ -4,10 +4,12 @@
     <!-- <arg name="configuration" default="roller_probe_50_MHz.yaml" /> -->
     <arg name="configuration" default="roller_probe_100_MHz.yaml" />
     <!-- <arg name="configuration" default="beccas.yaml" /> -->
+    <arg name="configuration_path" default="$(find-pkg-share peak_ros)/config/$(var configuration)" />
 
     <!-- <arg name="mps_file" default="composite_roller_probe/roller_probe_wing_cover_50_MHz.mps" /> -->
     <arg name="mps_file" default="composite_roller_probe/roller_probe_wing_cover_100_MHz.mps" />
     <!-- <arg name="mps_file" default="beccas.mps" /> -->
+    <arg name="mps_path" default="$(find-pkg-share peak_ros)/mps/$(var mps_file)" />
 
     <arg name="export_pcd" default="false" />
     <arg name="logging" default="false" />
@@ -20,8 +22,8 @@
         <push_ros_namespace namespace="peak"/>
 
         <node pkg="peak_ros" exec="peak_node" name="peak_node" output="screen">
-            <param name="mps_file" value="$(var mps_file)" />
-            <param from="$(find-pkg-share peak_ros)/config/$(var configuration)" />
+            <param name="mps_path" value="$(var mps_path)" />
+            <param from="$(var configuration_path)" />
         </node>
 
        <node pkg="pcl_ros" exec="filter_voxel_grid_node" name="voxel_grid" output="screen">
@@ -38,7 +40,7 @@
         <node pkg="peak_ros" exec="reconstruction_node" name="reconstruction_node" output="screen">
             <remap from="input" to="voxelised_gated_b_scan" />
             <remap from="output" to="detections" />
-            <param from="$(find-pkg-share peak_ros)/config/$(var configuration)" />
+            <param from="$(var configuration_path)" />
         </node>
 
         <!-- PCD Exporter -->
