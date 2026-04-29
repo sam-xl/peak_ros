@@ -3,7 +3,6 @@
 #include <cmath>
 #include <signal.h>
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -59,7 +58,7 @@ private:
   int acquisition_rate_;
   std::string peak_address_;
   int peak_port_;
-  std::string mps_file_;
+  std::string mps_path_;
 
   // TCG
   bool use_tcg_;

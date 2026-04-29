@@ -9,13 +9,11 @@ PeakNodelet::PeakNodelet()
 
   node_name_ = get_name();
   ns_ = get_namespace();
-  package_path_ = ament_index_cpp::get_package_share_directory("peak_ros");
   peak_handler_.setup(
       PeakNodelet::paramHandler("acquisition_rate", acquisition_rate_),
       PeakNodelet::paramHandler("peak_address", peak_address_),
       PeakNodelet::paramHandler("peak_port", peak_port_),
-      package_path_ + "/mps/" +
-          PeakNodelet::paramHandler("mps_file", mps_file_));
+      PeakNodelet::paramHandler("mps_path", mps_path_));
 
   // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   // TODO: Move to using smart pointers, mutex, futures or semiphors
