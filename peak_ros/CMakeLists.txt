@@ -10,7 +10,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include(FetchContent)
 FetchContent_Declare(
   peak_micropulse
-  GIT_REPOSITORY https://github.com/MShields1986/peak_micropulse_driver
+  GIT_REPOSITORY https://github.com/sam-xl/peak_micropulse_driver
   GIT_TAG        feature/nodelet_compatibility
 )
 FetchContent_MakeAvailable(peak_micropulse)
@@ -29,6 +29,7 @@ set(dependencies
   tf2_ros
   tf2_sensor_msgs
   ament_index_cpp
+  rclcpp_components
 )
 
 foreach(dep ${dependencies})
@@ -82,21 +83,13 @@ rosidl_target_interfaces(${PROJECT_NAME}_lib
 # Peak Node #
 ###############
 
-add_executable(peak_node src/peak_node.cpp)
-
-target_link_libraries(peak_node
-  ${PROJECT_NAME}_lib
-)
+rclcpp_components_register_node(${PROJECT_NAME}_lib PLUGIN "peak::PeakNodelet" EXECUTABLE peak_node)
 
 #######################
 # Reconstruction Node #
 #######################
 
-add_executable(reconstruction_node src/reconstruction_node.cpp)
-
-target_link_libraries(reconstruction_node
-  ${PROJECT_NAME}_lib
-)
+rclcpp_components_register_node(${PROJECT_NAME}_lib PLUGIN "peak::ReconstructionNodelet" EXECUTABLE reconstruction_node)
 
 #############
 ## Install ##

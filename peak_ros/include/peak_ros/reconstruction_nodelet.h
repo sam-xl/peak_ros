@@ -18,11 +18,11 @@
 
 #include "peak_ros/srv/stream_data.hpp"
 
-namespace reconstruction_namespace {
+namespace peak {
 
 class ReconstructionNodelet : public rclcpp::Node {
 public:
-  explicit ReconstructionNodelet();
+  explicit ReconstructionNodelet(const rclcpp::NodeOptions & options);
 
 private:
   template <typename ParamType>
@@ -62,4 +62,4 @@ private:
   geometry_msgs::msg::TransformStamped trans_;
 };
 
-} // namespace reconstruction_namespace
+} // namespace peak

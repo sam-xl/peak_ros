@@ -19,11 +19,11 @@
 #include "peak_ros/srv/take_single_measurement.hpp"
 #include "peak_ros/srv/send_command.hpp"
 
-namespace peak_namespace {
+namespace peak {
 
 class PeakNodelet : public rclcpp::Node {
 public:
-  PeakNodelet();
+  PeakNodelet(const rclcpp::NodeOptions & options);
   //~PeakNode();
 
 private:
@@ -98,4 +98,4 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
 };
 
-} // namespace peak_namespace
+} // namespace peak

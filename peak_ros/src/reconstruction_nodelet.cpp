@@ -1,9 +1,9 @@
 #include "peak_ros/reconstruction_nodelet.h"
 
-namespace reconstruction_namespace {
+namespace peak {
 
-ReconstructionNodelet::ReconstructionNodelet()
-    : rclcpp::Node("reconstruction_node"), rate_(5), b_scan_count_(0),
+ReconstructionNodelet::ReconstructionNodelet(const rclcpp::NodeOptions & options)
+    : rclcpp::Node("reconstruction_node", options), rate_(5), b_scan_count_(0),
       direction_(1) {
   node_name_ = get_name();
   ns_ = get_namespace();
@@ -253,4 +253,8 @@ void ReconstructionNodelet::timerCb() {
   }
 }
 
-} // namespace reconstruction_namespace
+} // namespace peak
+
+#include "rclcpp_components/register_node_macro.hpp"
+
+RCLCPP_COMPONENTS_REGISTER_NODE(peak::ReconstructionNodelet)

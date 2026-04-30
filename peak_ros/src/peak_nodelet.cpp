@@ -1,9 +1,9 @@
 #include "peak_ros/peak_nodelet.h"
 
-namespace peak_namespace {
+namespace peak {
 
-PeakNodelet::PeakNodelet()
-    : rclcpp::Node("peak_node"), peak_handler_(), stream_(false) {
+PeakNodelet::PeakNodelet(const rclcpp::NodeOptions & options)
+    : rclcpp::Node("peak_node", options), peak_handler_(), stream_(false) {
   RCLCPP_INFO_STREAM(this->get_logger(),
                      node_name_ << ": Initialising node...");
 
@@ -550,4 +550,8 @@ void PeakNodelet::timerCb() {
   }
 }
 
-} // namespace peak_namespace
+} // namespace peak
+
+#include "rclcpp_components/register_node_macro.hpp"
+
+RCLCPP_COMPONENTS_REGISTER_NODE(peak::PeakNodelet)
