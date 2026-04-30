@@ -22,7 +22,7 @@ namespace peak {
 
 class ReconstructionNodelet : public rclcpp::Node {
 public:
-  explicit ReconstructionNodelet(const rclcpp::NodeOptions & options);
+  explicit ReconstructionNodelet(const rclcpp::NodeOptions &options);
 
 private:
   template <typename ParamType>
@@ -34,8 +34,6 @@ private:
   void timerCb();
 
   int32_t rate_;
-  std::string node_name_;
-  std::string ns_;
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subscriber_;
 

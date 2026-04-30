@@ -2,12 +2,9 @@
 
 namespace peak {
 
-ReconstructionNodelet::ReconstructionNodelet(const rclcpp::NodeOptions & options)
+ReconstructionNodelet::ReconstructionNodelet(const rclcpp::NodeOptions &options)
     : rclcpp::Node("reconstruction_node", options), rate_(5), b_scan_count_(0),
       direction_(1) {
-  node_name_ = get_name();
-  ns_ = get_namespace();
-
   tfBuffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tfListener_ = std::make_shared<tf2_ros::TransformListener>(*tfBuffer_);
 
@@ -19,7 +16,7 @@ ReconstructionNodelet::ReconstructionNodelet(const rclcpp::NodeOptions & options
       this->create_publisher<sensor_msgs::msg::PointCloud2>("output", 10);
 
   publish_service_ = this->create_service<peak_ros::srv::StreamData>(
-      ns_ + "/publish_volume",
+      "publish_volume",
       std::bind(&ReconstructionNodelet::publishSrvCb, this,
                 std::placeholders::_1, std::placeholders::_2));
 
@@ -49,9 +46,9 @@ ParamType ReconstructionNodelet::paramHandler(std::string param_name,
     param_value = this->declare_parameter(param_name, param_value);
   }
 
-  RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Read in parameter "
-                                                    << param_name << " = "
-                                                    << param_value);
+  RCLCPP_INFO_STREAM(this->get_logger(), "Read in parameter " << param_name
+                                                              << " = "
+                                                              << param_value);
 
   return param_value;
 }
@@ -89,14 +86,12 @@ void ReconstructionNodelet::callback(
 bool ReconstructionNodelet::publishSrvCb(
     const peak_ros::srv::StreamData::Request::SharedPtr request,
     peak_ros::srv::StreamData::Response::SharedPtr response) {
-  RCLCPP_INFO_STREAM(this->get_logger(),
-                     node_name_ << ": Publish UT volume request received: "
-                                << request->stream_data);
+  RCLCPP_INFO_STREAM(this->get_logger(), "Publish UT volume request received: "
+                                             << request->stream_data);
 
   if (request->stream_data) {
     publisher_->publish(point_cloud_);
-    RCLCPP_INFO_STREAM(this->get_logger(),
-                       node_name_ << ": Published reconstruction");
+    RCLCPP_INFO_STREAM(this->get_logger(), "Published reconstruction");
     response->success = true;
     return true;
   } else {
@@ -107,7 +102,7 @@ bool ReconstructionNodelet::publishSrvCb(
 
 void ReconstructionNodelet::timerCb() {
   RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 600000,
-                              node_name_ << ": Node running");
+                              "Node running");
 
   if (!buffer_.empty()) {
     sensor_msgs::msg::PointCloud2 *msg = &buffer_.front();
@@ -142,10 +137,10 @@ void ReconstructionNodelet::timerCb() {
         buffer_.pop_front();
 
       } catch (tf2::TransformException &ex) {
-        RCLCPP_WARN_STREAM(
-            this->get_logger(),
-            node_name_ << ": Could not find transform " << recon_frame_id_
-                       << " to " << msg->header.frame_id << ": " << ex.what());
+        RCLCPP_WARN_STREAM(this->get_logger(), "Could not find transform "
+                                                   << recon_frame_id_ << " to "
+                                                   << msg->header.frame_id
+                                                   << ": " << ex.what());
       }
 
       ////////////////////////////////////////////////////////////////////////////////////////////
@@ -174,25 +169,21 @@ void ReconstructionNodelet::timerCb() {
         if (dt.seconds() < 4.0l) {
           if (direction_ == 1) {
             RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(),
-                                        30000,
-                                        node_name_ << ": Going forwards");
+                                        30000, "Going forwards");
             trans_.transform.translation.x += recon_const_vel_ * dt.seconds();
           } else {
             RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(),
-                                        30000,
-                                        node_name_ << ": Going backwards");
+                                        30000, "Going backwards");
             trans_.transform.translation.x -= recon_const_vel_ * dt.seconds();
           }
           // Switching raster paths
         } else {
           publisher_->publish(point_cloud_);
-          RCLCPP_INFO_STREAM(this->get_logger(),
-                             node_name_ << ": Published reconstruction");
+          RCLCPP_INFO_STREAM(this->get_logger(), "Published reconstruction");
           // initialisePointcloud();
           if (flip_direction_) {
             if (direction_ == 1) {
-              RCLCPP_INFO_STREAM(this->get_logger(),
-                                 node_name_ << ": Changing direction");
+              RCLCPP_INFO_STREAM(this->get_logger(), "Changing direction");
               direction_ = -1;
               trans_.transform.translation.y += 0.09l;
               trans_.transform.rotation.x = 1.0l;
@@ -200,8 +191,7 @@ void ReconstructionNodelet::timerCb() {
               trans_.transform.rotation.z = 0.0l;
               trans_.transform.rotation.w = 0.0l;
             } else {
-              RCLCPP_INFO_STREAM(this->get_logger(),
-                                 node_name_ << ": Changing direction");
+              RCLCPP_INFO_STREAM(this->get_logger(), "Changing direction");
               direction_ = 1;
               trans_.transform.rotation.x = 0.0l;
               trans_.transform.rotation.y = -1.0l;
@@ -212,8 +202,8 @@ void ReconstructionNodelet::timerCb() {
             trans_.transform.translation.x = 0.0l;
             trans_.transform.translation.y += 0.045l;
             RCLCPP_INFO_STREAM(this->get_logger(),
-                               node_name_ << ": Reset start of pass to zero: "
-                                          << trans_.transform.translation.x);
+                               "Reset start of pass to zero: "
+                                   << trans_.transform.translation.x);
           }
         }
       }
@@ -222,13 +212,13 @@ void ReconstructionNodelet::timerCb() {
                                                       trans_);
 
       // RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(),
-      // 10000, node_name_ << ": transform translation x: " <<
+      // 10000, "transform translation x: " <<
       // trans_.transform.translation.x);
       // RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(),
-      // 10000, node_name_ << ": transform translation y: " <<
+      // 10000, "transform translation y: " <<
       // trans_.transform.translation.y);
       // RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(),
-      // 10000, node_name_ << ": transform translation z: " <<
+      // 10000, "transform translation z: " <<
       // trans_.transform.translation.z);
 
       point_cloud_.width += output_pointcloud2.width;

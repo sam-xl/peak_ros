@@ -15,15 +15,15 @@
 #include "peak_ros/msg/ascan.hpp"
 #include "peak_ros/msg/observation.hpp"
 
+#include "peak_ros/srv/send_command.hpp"
 #include "peak_ros/srv/stream_data.hpp"
 #include "peak_ros/srv/take_single_measurement.hpp"
-#include "peak_ros/srv/send_command.hpp"
 
 namespace peak {
 
 class PeakNodelet : public rclcpp::Node {
 public:
-  PeakNodelet(const rclcpp::NodeOptions & options);
+  PeakNodelet(const rclcpp::NodeOptions &options);
   //~PeakNode();
 
 private:
@@ -40,17 +40,15 @@ private:
   bool takeMeasurementSrvCb(
       const peak_ros::srv::TakeSingleMeasurement::Request::SharedPtr request,
       peak_ros::srv::TakeSingleMeasurement::Response::SharedPtr response);
-  bool sendCommandSrvCb(
-      const peak_ros::srv::SendCommand::Request::SharedPtr request,
-      peak_ros::srv::SendCommand::Response::SharedPtr response);
+  bool
+  sendCommandSrvCb(const peak_ros::srv::SendCommand::Request::SharedPtr request,
+                   peak_ros::srv::SendCommand::Response::SharedPtr response);
   void takeMeasurement();
   void populateAScanMessage();
   void populateBScanMessage(const peak_ros::msg::Observation &obs_msg);
   void timerCb();
 
   int digitisation_rate_;
-  std::string node_name_;
-  std::string ns_;
   std::string package_path_;
   bool profile_;
 

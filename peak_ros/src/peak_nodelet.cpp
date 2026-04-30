@@ -2,13 +2,10 @@
 
 namespace peak {
 
-PeakNodelet::PeakNodelet(const rclcpp::NodeOptions & options)
+PeakNodelet::PeakNodelet(const rclcpp::NodeOptions &options)
     : rclcpp::Node("peak_node", options), peak_handler_(), stream_(false) {
-  RCLCPP_INFO_STREAM(this->get_logger(),
-                     node_name_ << ": Initialising node...");
+  RCLCPP_INFO_STREAM(this->get_logger(), "Initialising node...");
 
-  node_name_ = get_name();
-  ns_ = get_namespace();
   peak_handler_.setup(
       PeakNodelet::paramHandler("acquisition_rate", acquisition_rate_),
       PeakNodelet::paramHandler("peak_address", peak_address_),
@@ -45,33 +42,31 @@ PeakNodelet::PeakNodelet(const rclcpp::NodeOptions & options)
   prePopulateGatedBScanMessage();
 
   ascan_publisher_ =
-      this->create_publisher<peak_ros::msg::Observation>(ns_ + "/a_scans", 100);
-  bscan_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-      ns_ + "/b_scan", 100);
+      this->create_publisher<peak_ros::msg::Observation>("a_scans", 100);
+  bscan_publisher_ =
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("b_scan", 100);
   gated_bscan_publisher_ =
-      this->create_publisher<sensor_msgs::msg::PointCloud2>(
-          ns_ + "/gated_b_scan", 100);
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("gated_b_scan",
+                                                            100);
 
   single_measure_service_ =
       this->create_service<peak_ros::srv::TakeSingleMeasurement>(
-          ns_ + "/take_single_measurement",
+          "take_single_measurement",
           std::bind(&PeakNodelet::takeMeasurementSrvCb, this,
                     std::placeholders::_1, std::placeholders::_2));
   stream_service_ = this->create_service<peak_ros::srv::StreamData>(
-      ns_ + "/stream_data",
-      std::bind(&PeakNodelet::streamDataSrvCb, this, std::placeholders::_1,
-                std::placeholders::_2));
+      "stream_data", std::bind(&PeakNodelet::streamDataSrvCb, this,
+                               std::placeholders::_1, std::placeholders::_2));
 
   send_command_service_ = this->create_service<peak_ros::srv::SendCommand>(
-      ns_ + "/send_command",
-      std::bind(&PeakNodelet::sendCommandSrvCb, this, std::placeholders::_1,
-                std::placeholders::_2));
+      "send_command", std::bind(&PeakNodelet::sendCommandSrvCb, this,
+                                std::placeholders::_1, std::placeholders::_2));
 
   timer_ = this->create_wall_timer(
       std::chrono::nanoseconds(1000000000 / acquisition_rate_),
       std::bind(&PeakNodelet::timerCb, this));
 
-  RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Node initialised");
+  RCLCPP_INFO_STREAM(this->get_logger(), "Node initialised");
 }
 
 // PeakNodelet::~PeakNodelet() {
@@ -86,24 +81,22 @@ ParamType PeakNodelet::paramHandler(std::string param_name,
     param_value = this->declare_parameter(param_name, param_value);
   }
 
-  RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Read in parameter "
-                                                    << param_name << " = "
-                                                    << param_value);
+  RCLCPP_INFO_STREAM(this->get_logger(), "Read in parameter " << param_name
+                                                              << " = "
+                                                              << param_value);
 
   return param_value;
 }
 
 void PeakNodelet::initHardware() {
-  RCLCPP_INFO_STREAM(this->get_logger(),
-                     node_name_ << ": Initialising Peak hardware...");
+  RCLCPP_INFO_STREAM(this->get_logger(), "Initialising Peak hardware...");
 
   peak_handler_.connect();
   peak_handler_.sendReset(digitisation_rate_);
   peak_handler_.readMpsFile();
   peak_handler_.sendMpsConfiguration();
 
-  RCLCPP_INFO_STREAM(this->get_logger(),
-                     node_name_ << ": Peak hardware initialised");
+  RCLCPP_INFO_STREAM(this->get_logger(), "Peak hardware initialised");
 }
 
 void PeakNodelet::prePopulateAScanMessage() {
@@ -189,9 +182,8 @@ void PeakNodelet::prePopulateGatedBScanMessage() {
 bool PeakNodelet::streamDataSrvCb(
     const peak_ros::srv::StreamData::Request::SharedPtr request,
     peak_ros::srv::StreamData::Response::SharedPtr response) {
-  RCLCPP_INFO_STREAM(this->get_logger(), node_name_
-                                             << ": Streaming request received: "
-                                             << request->stream_data);
+  RCLCPP_INFO_STREAM(this->get_logger(),
+                     "Streaming request received: " << request->stream_data);
   if (request->stream_data) {
     stream_ = true;
     response->success = true;
@@ -207,8 +199,7 @@ bool PeakNodelet::takeMeasurementSrvCb(
     const peak_ros::srv::TakeSingleMeasurement::Request::SharedPtr request,
     peak_ros::srv::TakeSingleMeasurement::Response::SharedPtr response) {
   RCLCPP_INFO_STREAM(this->get_logger(),
-                     node_name_
-                         << ": Take single measurement request received: "
+                     "Take single measurement request received: "
                          << request->take_single_measurement);
   if (request->take_single_measurement) {
     takeMeasurement();
@@ -224,14 +215,11 @@ bool PeakNodelet::sendCommandSrvCb(
     const peak_ros::srv::SendCommand::Request::SharedPtr request,
     peak_ros::srv::SendCommand::Response::SharedPtr response) {
   RCLCPP_INFO_STREAM(this->get_logger(),
-                     node_name_
-                         << ": Sending command: "
-                         << request->command);
+                     "Sending command: " << request->command);
   peak_handler_.sendCommand(request->command);
 
   // Update packet length if necessary
-  if (request->command.rfind("GATS", 0) == 0)
-  {
+  if (request->command.rfind("GATS", 0) == 0) {
     peak_handler_.setGates(request->command);
     peak_handler_.calcPacketLength();
     prePopulateAScanMessage();
@@ -539,14 +527,14 @@ void PeakNodelet::populateBScanMessage(
 
 void PeakNodelet::timerCb() {
   RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 600000,
-                              node_name_ << ": Node running");
+                              "Node running");
   if (stream_) {
     RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 60000,
-                                node_name_ << ": Streaming data...");
+                                "Streaming data...");
     takeMeasurement();
   } else {
     RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 60000,
-                                node_name_ << ": Not streaming data...");
+                                "Not streaming data...");
   }
 }
 
