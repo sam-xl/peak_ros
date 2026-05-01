@@ -41,7 +41,8 @@ PeakNodelet::PeakNodelet(const rclcpp::NodeOptions &options)
   prePopulateBScanMessage();
   prePopulateGatedBScanMessage();
 
-  param_cb_handle_ = add_post_set_parameters_callback(std::bind(&PeakNodelet::postSetParametersCallback, this, std::placeholders::_1));
+  param_cb_handle_ = add_post_set_parameters_callback(std::bind(
+      &PeakNodelet::postSetParametersCallback, this, std::placeholders::_1));
 
   // Hardware parameters. They default to -1, which means don't
   // overwrite the values defined in the .mps file
@@ -221,10 +222,8 @@ bool PeakNodelet::takeMeasurementSrvCb(
   }
 }
 
-void PeakNodelet::sendCommand(const std::string &cmd)
-{
-  RCLCPP_INFO_STREAM(this->get_logger(),
-                     "Sending command: " << cmd);
+void PeakNodelet::sendCommand(const std::string &cmd) {
+  RCLCPP_INFO_STREAM(this->get_logger(), "Sending command: " << cmd);
   peak_handler_.sendCommand(cmd);
 
   // Update packet length if necessary
@@ -274,8 +273,7 @@ void PeakNodelet::takeMeasurement() {
     }
 
     // ~0.3ms
-    if (ascan_publisher_->get_subscription_count())
-    {
+    if (ascan_publisher_->get_subscription_count()) {
       populateAScanMessage();
     }
 
@@ -305,8 +303,8 @@ void PeakNodelet::takeMeasurement() {
     }
 
     // ~12ms
-    if (bscan_publisher_->get_subscription_count() || gated_bscan_publisher_->get_subscription_count())
-    {
+    if (bscan_publisher_->get_subscription_count() ||
+        gated_bscan_publisher_->get_subscription_count()) {
       populateBScanMessage(ltpa_msg_);
     }
 
@@ -559,51 +557,38 @@ void PeakNodelet::timerCb() {
   }
 }
 
-void PeakNodelet::postSetParametersCallback(const std::vector<rclcpp::Parameter> & parameters)
-{
+void PeakNodelet::postSetParametersCallback(
+    const std::vector<rclcpp::Parameter> &parameters) {
   bool send_gate = false;
 
-  for(const auto & param:parameters)
-  {
-    if (param.get_name() == "ltpa.gate.start")
-    {
+  for (const auto &param : parameters) {
+    if (param.get_name() == "ltpa.gate.start") {
       ltpa_gate_start_ = param.get_value<int>();
       send_gate = true;
-    }
-    else if (param.get_name() == "ltpa.gate.end")
-    {
+    } else if (param.get_name() == "ltpa.gate.end") {
       ltpa_gate_end_ = param.get_value<int>();
       send_gate = true;
-    }
-    else if (param.get_name() == "ltpa.delay")
-    {
+    } else if (param.get_name() == "ltpa.delay") {
       ltpa_delay_ = param.get_value<int>();
-      if (ltpa_delay_ != -1)
-      {
+      if (ltpa_delay_ != -1) {
         sendCommand("DLYS 1 " + std::to_string(ltpa_delay_));
       }
-    }
-    else if (param.get_name() == "ltpa.gain")
-    {
+    } else if (param.get_name() == "ltpa.gain") {
       ltpa_gain_ = param.get_value<int>();
-      if (ltpa_gain_ != -1)
-      {
+      if (ltpa_gain_ != -1) {
         sendCommand("GANS 1 " + std::to_string(ltpa_gain_));
       }
-    }
-    else if (param.get_name() == "ltpa.prf")
-    {
+    } else if (param.get_name() == "ltpa.prf") {
       ltpa_prf_ = param.get_value<int>();
-      if (ltpa_prf_ != -1)
-      {
+      if (ltpa_prf_ != -1) {
         sendCommand("PRF " + std::to_string(ltpa_prf_));
       }
     }
   }
 
-  if (send_gate && ltpa_gate_start_ != -1 && ltpa_gate_end_ != -1)
-  {
-    sendCommand("GATS 1 " + std::to_string(ltpa_gate_start_) + " " + std::to_string(ltpa_gate_end_));
+  if (send_gate && ltpa_gate_start_ != -1 && ltpa_gate_end_ != -1) {
+    sendCommand("GATS 1 " + std::to_string(ltpa_gate_start_) + " " +
+                std::to_string(ltpa_gate_end_));
   }
 }
 

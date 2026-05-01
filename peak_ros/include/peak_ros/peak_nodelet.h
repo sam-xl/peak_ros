@@ -49,7 +49,8 @@ private:
   void populateBScanMessage(const peak_ros::msg::Observation &obs_msg);
   void timerCb();
 
-  void postSetParametersCallback(const std::vector<rclcpp::Parameter> & parameters);
+  void
+  postSetParametersCallback(const std::vector<rclcpp::Parameter> &parameters);
 
   int digitisation_rate_;
   std::string package_path_;
