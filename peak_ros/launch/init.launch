@@ -17,37 +17,44 @@
 
     <arg name="rviz" default="true" />
 
-
     <group>
         <push_ros_namespace namespace="peak"/>
 
-        <node pkg="peak_ros" exec="peak_node" name="peak_node" output="screen">
-            <param name="mps_path" value="$(var mps_path)" />
-            <param from="$(var configuration_path)" />
-        </node>
+        <node_container pkg="rclcpp_components" exec="component_container" name="container" namespace="" output="screen">
+            <composable_node pkg="peak_ros" plugin="peak::PeakNodelet" name="peak_node">
+                <param name="mps_path" value="$(var mps_path)" />
+                <param from="$(var configuration_path)" />
+            </composable_node>
 
-       <node pkg="pcl_ros" exec="filter_voxel_grid_node" name="voxel_grid" output="screen">
-            <remap from="input" to="gated_b_scan" />
-            <remap from="output" to="voxelised_gated_b_scan" />
-            <param name="filter_field_name" value="z"/>
-            <param name="filter_limit_min" value="0.0001"/>
-            <param name="filter_limit_max" value="0.05"/>
-            <param name="filter_limit_negative" value="False"/>
-            <param name="leaf_size" value="0.0001"/>
-            <param name="min_points_per_voxel" value="1"/>
-        </node>
+            <composable_node pkg="peak_ros" plugin="peak::PeakNodelet" name="peak_node">
+                <param name="mps_path" value="$(var mps_path)" />
+                <param from="$(var configuration_path)" />
+            </composable_node>
 
-        <node pkg="peak_ros" exec="reconstruction_node" name="reconstruction_node" output="screen">
-            <remap from="input" to="voxelised_gated_b_scan" />
-            <remap from="output" to="detections" />
-            <param from="$(var configuration_path)" />
-        </node>
+            <composable_node pkg="pcl_ros" plugin="pcl_ros::VoxelGrid" name="voxel_grid">
+                <remap from="input" to="gated_b_scan" />
+                <remap from="output" to="voxelised_gated_b_scan" />
+                <param name="filter_field_name" value="z"/>
+                <param name="filter_limit_min" value="0.0001"/>
+                <param name="filter_limit_max" value="0.05"/>
+                <param name="filter_limit_negative" value="False"/>
+                <param name="leaf_size" value="0.0001"/>
+                <param name="min_points_per_voxel" value="1"/>
+            </composable_node>
 
-        <!-- PCD Exporter -->
-        <node pkg="pcl_ros" exec="pointcloud_to_pcd" name="peak_pointcloud_to_pcd" if="$(var export_pcd)">
-          <remap from="input" to="/peak/detections" />
-          <param name="prefix" value="$(find-pkg-share peak_ros)/bags/" />
-        </node>
+            <composable_node pkg="peak_ros" plugin="peak::ReconstructionNodelet" name="reconstruction_node">
+                <remap from="input" to="voxelised_gated_b_scan" />
+                <remap from="output" to="detections" />
+                <param from="$(var configuration_path)" />
+            </composable_node>
+
+            <!-- PCD Exporter -->
+            <composable_node pkg="pcl_ros" plugin="pcl_ros::PointCloudToPCD" name="peak_pointcloud_to_pcd" if="$(var export_pcd)">
+                <remap from="input" to="/peak/detections" />
+                <param name="prefix" value="$(find-pkg-share peak_ros)/bags/" />
+            </composable_node>
+
+        </node_container>
 
         <!-- Logging -->
         <executable cmd="ros2 bag record --repeat-latched -b 1024 -o $(find-pkg-share peak_ros)/bags/$(var rosbag_name) /tf /peak/a_scans /peak/b_scan /peak/gated_b_scan /peak/detections /iiwa/state/CartesianWrench" if="$(var logging)" output="screen"/>
