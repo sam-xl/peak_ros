@@ -21,7 +21,6 @@
   <depend>tf2_sensor_msgs</depend>
   <depend>visualization_msgs</depend>
   <depend>ament_index_cpp</depend>
-  <depend>libboost-system-dev</depend>
   <depend>rclcpp_components</depend>
 
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
