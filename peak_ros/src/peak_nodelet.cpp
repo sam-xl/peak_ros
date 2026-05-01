@@ -41,6 +41,16 @@ PeakNodelet::PeakNodelet(const rclcpp::NodeOptions &options)
   prePopulateBScanMessage();
   prePopulateGatedBScanMessage();
 
+  param_cb_handle_ = add_post_set_parameters_callback(std::bind(&PeakNodelet::postSetParametersCallback, this, std::placeholders::_1));
+
+  // Hardware parameters. They default to -1, which means don't
+  // overwrite the values defined in the .mps file
+  PeakNodelet::paramHandler("ltpa.gate.start", ltpa_gate_start_);
+  PeakNodelet::paramHandler("ltpa.gate.end", ltpa_gate_end_);
+  PeakNodelet::paramHandler("ltpa.delay", ltpa_delay_);
+  PeakNodelet::paramHandler("ltpa.gain", ltpa_gain_);
+  PeakNodelet::paramHandler("ltpa.prf", ltpa_prf_);
+
   ascan_publisher_ =
       this->create_publisher<peak_ros::msg::Observation>("a_scans", 100);
   bscan_publisher_ =
@@ -211,21 +221,26 @@ bool PeakNodelet::takeMeasurementSrvCb(
   }
 }
 
-bool PeakNodelet::sendCommandSrvCb(
-    const peak_ros::srv::SendCommand::Request::SharedPtr request,
-    peak_ros::srv::SendCommand::Response::SharedPtr response) {
+void PeakNodelet::sendCommand(const std::string &cmd)
+{
   RCLCPP_INFO_STREAM(this->get_logger(),
-                     "Sending command: " << request->command);
-  peak_handler_.sendCommand(request->command);
+                     "Sending command: " << cmd);
+  peak_handler_.sendCommand(cmd);
 
   // Update packet length if necessary
-  if (request->command.rfind("GATS", 0) == 0) {
-    peak_handler_.setGates(request->command);
+  if (cmd.rfind("GATS", 0) == 0) {
+    peak_handler_.setGates(cmd);
     peak_handler_.calcPacketLength();
     prePopulateAScanMessage();
     prePopulateBScanMessage();
     prePopulateGatedBScanMessage();
   }
+}
+
+bool PeakNodelet::sendCommandSrvCb(
+    const peak_ros::srv::SendCommand::Request::SharedPtr request,
+    peak_ros::srv::SendCommand::Response::SharedPtr response) {
+  sendCommand(request->command);
 
   response->success = true;
   return true;
@@ -259,7 +274,10 @@ void PeakNodelet::takeMeasurement() {
     }
 
     // ~0.3ms
-    populateAScanMessage();
+    if (ascan_publisher_->get_subscription_count())
+    {
+      populateAScanMessage();
+    }
 
     if (profile_) {
       end_2 = std::chrono::high_resolution_clock::now();
@@ -287,7 +305,10 @@ void PeakNodelet::takeMeasurement() {
     }
 
     // ~12ms
-    populateBScanMessage(ltpa_msg_);
+    if (bscan_publisher_->get_subscription_count() || gated_bscan_publisher_->get_subscription_count())
+    {
+      populateBScanMessage(ltpa_msg_);
+    }
 
     if (profile_) {
       end_4 = std::chrono::high_resolution_clock::now();
@@ -535,6 +556,54 @@ void PeakNodelet::timerCb() {
   } else {
     RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 60000,
                                 "Not streaming data...");
+  }
+}
+
+void PeakNodelet::postSetParametersCallback(const std::vector<rclcpp::Parameter> & parameters)
+{
+  bool send_gate = false;
+
+  for(const auto & param:parameters)
+  {
+    if (param.get_name() == "ltpa.gate.start")
+    {
+      ltpa_gate_start_ = param.get_value<int>();
+      send_gate = true;
+    }
+    else if (param.get_name() == "ltpa.gate.end")
+    {
+      ltpa_gate_end_ = param.get_value<int>();
+      send_gate = true;
+    }
+    else if (param.get_name() == "ltpa.delay")
+    {
+      ltpa_delay_ = param.get_value<int>();
+      if (ltpa_delay_ != -1)
+      {
+        sendCommand("DLYS 1 " + std::to_string(ltpa_delay_));
+      }
+    }
+    else if (param.get_name() == "ltpa.gain")
+    {
+      ltpa_gain_ = param.get_value<int>();
+      if (ltpa_gain_ != -1)
+      {
+        sendCommand("GANS 1 " + std::to_string(ltpa_gain_));
+      }
+    }
+    else if (param.get_name() == "ltpa.prf")
+    {
+      ltpa_prf_ = param.get_value<int>();
+      if (ltpa_prf_ != -1)
+      {
+        sendCommand("PRF " + std::to_string(ltpa_prf_));
+      }
+    }
+  }
+
+  if (send_gate && ltpa_gate_start_ != -1 && ltpa_gate_end_ != -1)
+  {
+    sendCommand("GATS 1 " + std::to_string(ltpa_gate_start_) + " " + std::to_string(ltpa_gate_end_));
   }
 }
 

@@ -34,6 +34,7 @@ private:
   void prePopulateAScanMessage();
   void prePopulateBScanMessage();
   void prePopulateGatedBScanMessage();
+  void sendCommand(const std::string &cmd);
   bool
   streamDataSrvCb(const peak_ros::srv::StreamData::Request::SharedPtr request,
                   peak_ros::srv::StreamData::Response::SharedPtr response);
@@ -48,6 +49,8 @@ private:
   void populateBScanMessage(const peak_ros::msg::Observation &obs_msg);
   void timerCb();
 
+  void postSetParametersCallback(const std::vector<rclcpp::Parameter> & parameters);
+
   int digitisation_rate_;
   std::string package_path_;
   bool profile_;
@@ -57,6 +60,13 @@ private:
   std::string peak_address_;
   int peak_port_;
   std::string mps_path_;
+
+  // LTPA parameters
+  int ltpa_gate_start_ = -1;
+  int ltpa_gate_end_ = -1;
+  int ltpa_delay_ = -1;
+  int ltpa_gain_ = -1;
+  int ltpa_prf_ = -1;
 
   // TCG
   bool use_tcg_;
@@ -94,6 +104,8 @@ private:
   rclcpp::Service<peak_ros::srv::SendCommand>::SharedPtr send_command_service_;
 
   rclcpp::TimerBase::SharedPtr timer_;
+
+  rclcpp::Node::PostSetParametersCallbackHandle::SharedPtr param_cb_handle_;
 };
 
 } // namespace peak

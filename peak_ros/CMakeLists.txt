@@ -11,7 +11,7 @@ include(FetchContent)
 FetchContent_Declare(
   peak_micropulse
   GIT_REPOSITORY https://github.com/sam-xl/peak_micropulse_driver
-  GIT_TAG        feature/nodelet_compatibility
+  GIT_TAG        NXT03-668/fix-ltpa-lockup
 )
 FetchContent_MakeAvailable(peak_micropulse)
 
@@ -70,13 +70,11 @@ ament_target_dependencies(${PROJECT_NAME}_lib
   ${dependencies}
 )
 
+rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
+
 target_link_libraries(${PROJECT_NAME}_lib
   PeakMicroPulseHandler
-)
-
-rosidl_target_interfaces(${PROJECT_NAME}_lib
-  ${PROJECT_NAME}
-  "rosidl_typesupport_cpp"
+  "${cpp_typesupport_target}"
 )
 
 ###############
