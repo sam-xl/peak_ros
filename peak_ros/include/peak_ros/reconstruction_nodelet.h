@@ -18,7 +18,7 @@
 
 #include "peak_ros/srv/stream_data.hpp"
 
-namespace peak {
+namespace peak_ros {
 
 class ReconstructionNodelet : public rclcpp::Node {
 public:
@@ -60,4 +60,4 @@ private:
   geometry_msgs::msg::TransformStamped trans_;
 };
 
-} // namespace peak
+} // namespace peak_ros

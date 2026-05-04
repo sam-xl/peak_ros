@@ -19,7 +19,7 @@
 #include "peak_ros/srv/stream_data.hpp"
 #include "peak_ros/srv/take_single_measurement.hpp"
 
-namespace peak {
+namespace peak_ros {
 
 class PeakNodelet : public rclcpp::Node {
 public:
@@ -110,4 +110,4 @@ private:
   rclcpp::Node::PostSetParametersCallbackHandle::SharedPtr param_cb_handle_;
 };
 
-} // namespace peak
+} // namespace peak_ros

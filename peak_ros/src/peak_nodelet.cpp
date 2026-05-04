@@ -1,6 +1,6 @@
 #include "peak_ros/peak_nodelet.h"
 
-namespace peak {
+namespace peak_ros {
 
 PeakNodelet::PeakNodelet(const rclcpp::NodeOptions &options)
     : rclcpp::Node("peak_node", options), peak_handler_(), stream_(false) {
@@ -597,8 +597,8 @@ void PeakNodelet::postSetParametersCallback(
   }
 }
 
-} // namespace peak
+} // namespace peak_ros
 
 #include "rclcpp_components/register_node_macro.hpp"
 
-RCLCPP_COMPONENTS_REGISTER_NODE(peak::PeakNodelet)
+RCLCPP_COMPONENTS_REGISTER_NODE(peak_ros::PeakNodelet)

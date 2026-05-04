@@ -81,13 +81,13 @@ target_link_libraries(${PROJECT_NAME}_lib
 # Peak Node #
 ###############
 
-rclcpp_components_register_node(${PROJECT_NAME}_lib PLUGIN "peak::PeakNodelet" EXECUTABLE peak_node)
+rclcpp_components_register_node(${PROJECT_NAME}_lib PLUGIN "peak_ros::PeakNodelet" EXECUTABLE peak_node)
 
 #######################
 # Reconstruction Node #
 #######################
 
-rclcpp_components_register_node(${PROJECT_NAME}_lib PLUGIN "peak::ReconstructionNodelet" EXECUTABLE reconstruction_node)
+rclcpp_components_register_node(${PROJECT_NAME}_lib PLUGIN "peak_ros::ReconstructionNodelet" EXECUTABLE reconstruction_node)
 
 #############
 ## Install ##

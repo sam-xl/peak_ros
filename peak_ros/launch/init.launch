@@ -21,7 +21,7 @@
         <push_ros_namespace namespace="peak"/>
 
         <node_container pkg="rclcpp_components" exec="component_container" name="container" namespace="">
-            <composable_node pkg="peak_ros" plugin="peak::PeakNodelet" name="peak_node">
+            <composable_node pkg="peak_ros" plugin="peak_ros::PeakNodelet" name="peak_node">
                 <param name="mps_path" value="$(var mps_path)" />
                 <param from="$(var configuration_path)" />
             </composable_node>
@@ -37,7 +37,7 @@
                 <param name="min_points_per_voxel" value="1"/>
             </composable_node>
 
-            <composable_node pkg="peak_ros" plugin="peak::ReconstructionNodelet" name="reconstruction_node">
+            <composable_node pkg="peak_ros" plugin="peak_ros::ReconstructionNodelet" name="reconstruction_node">
                 <remap from="input" to="voxelised_gated_b_scan" />
                 <remap from="output" to="detections" />
                 <param from="$(var configuration_path)" />

@@ -1,6 +1,6 @@
 #include "peak_ros/reconstruction_nodelet.h"
 
-namespace peak {
+namespace peak_ros {
 
 ReconstructionNodelet::ReconstructionNodelet(const rclcpp::NodeOptions &options)
     : rclcpp::Node("reconstruction_node", options), rate_(5), b_scan_count_(0),
@@ -247,4 +247,4 @@ void ReconstructionNodelet::timerCb() {
 
 #include "rclcpp_components/register_node_macro.hpp"
 
-RCLCPP_COMPONENTS_REGISTER_NODE(peak::ReconstructionNodelet)
+RCLCPP_COMPONENTS_REGISTER_NODE(peak_ros::ReconstructionNodelet)
