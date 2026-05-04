@@ -19,6 +19,7 @@ PeakNodelet::PeakNodelet(const rclcpp::NodeOptions &options)
 
   PeakNodelet::paramHandler("digitisation_rate", digitisation_rate_);
   PeakNodelet::paramHandler("profile", profile_);
+  PeakNodelet::paramHandler("center_frame", center_frame_);
 
   PeakNodelet::paramHandler("tcg.use_tcg", use_tcg_);
   PeakNodelet::paramHandler("tcg.amp_factor", amp_factor_);
@@ -273,9 +274,7 @@ void PeakNodelet::takeMeasurement() {
     }
 
     // ~0.3ms
-    if (ascan_publisher_->get_subscription_count()) {
-      populateAScanMessage();
-    }
+    populateAScanMessage();
 
     if (profile_) {
       end_2 = std::chrono::high_resolution_clock::now();
@@ -416,6 +415,12 @@ void PeakNodelet::populateBScanMessage(
   float tof;
 
   int element_i = 0;
+  float offset = 0;
+  if (center_frame_)
+  {
+    // Publish with center of probe in center of frame, if desired
+    offset = obs_msg.element_pitch * (obs_msg.num_ascans - 1) / 2000.0f;
+  }
 
   for (const auto &ascan : obs_msg.ascans) {
     bool found_front_wall = false;
@@ -445,7 +450,7 @@ void PeakNodelet::populateBScanMessage(
 
       x = 0.0f;
       y = (float)((float)element_i * (float)obs_msg.element_pitch *
-                  0.001f); // mm to m
+                  0.001f) - offset; // mm to m
       z = (float)((float)i * (float)obs_msg.vel_material * dt / 2.0f);
 
       if (use_tcg_ and z > (10.0f * 0.001f)) { // TODO: Param for skipping x mm

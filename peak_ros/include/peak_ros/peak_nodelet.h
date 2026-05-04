@@ -55,6 +55,7 @@ private:
   int digitisation_rate_;
   std::string package_path_;
   bool profile_;
+  bool center_frame_;
 
   // Config
   int acquisition_rate_;
