@@ -26,11 +26,6 @@
                 <param from="$(var configuration_path)" />
             </composable_node>
 
-            <composable_node pkg="peak_ros" plugin="peak::PeakNodelet" name="peak_node">
-                <param name="mps_path" value="$(var mps_path)" />
-                <param from="$(var configuration_path)" />
-            </composable_node>
-
             <composable_node pkg="pcl_ros" plugin="pcl_ros::VoxelGrid" name="voxel_grid">
                 <remap from="input" to="gated_b_scan" />
                 <remap from="output" to="voxelised_gated_b_scan" />
