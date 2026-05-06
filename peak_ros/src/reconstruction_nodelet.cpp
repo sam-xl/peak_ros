@@ -243,7 +243,7 @@ void ReconstructionNodelet::timerCb() {
   }
 }
 
-} // namespace peak
+} // namespace peak_ros
 
 #include "rclcpp_components/register_node_macro.hpp"
 

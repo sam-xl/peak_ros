@@ -416,8 +416,7 @@ void PeakNodelet::populateBScanMessage(
 
   int element_i = 0;
   float offset = 0;
-  if (center_frame_)
-  {
+  if (center_frame_) {
     // Publish with center of probe in center of frame, if desired
     offset = obs_msg.element_pitch * (obs_msg.num_ascans - 1) / 2000.0f;
   }
@@ -449,8 +448,8 @@ void PeakNodelet::populateBScanMessage(
       // }
 
       x = 0.0f;
-      y = (float)((float)element_i * (float)obs_msg.element_pitch *
-                  0.001f) - offset; // mm to m
+      y = (float)((float)element_i * (float)obs_msg.element_pitch * 0.001f) -
+          offset; // mm to m
       z = (float)((float)i * (float)obs_msg.vel_material * dt / 2.0f);
 
       if (use_tcg_ and z > (10.0f * 0.001f)) { // TODO: Param for skipping x mm

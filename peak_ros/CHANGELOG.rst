@@ -9,3 +9,5 @@ Changelog for peak_ros
 - Implemented as ROS2 Components
 - Added dynamic parameter interface for common PEAK parameters
 - Fixed LTPA lock up when interrupted
+- Fixed logging and postprocessing
+- Removed postprocessing scripts
