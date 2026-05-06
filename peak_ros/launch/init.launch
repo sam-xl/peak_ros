@@ -13,6 +13,7 @@
 
     <arg name="export_pcd" default="false" />
     <arg name="logging" default="false" />
+    <arg name="logging_path" default="." />
     <arg name="rosbag_name" default="peak_recording" />
 
     <arg name="rviz" default="true" />
@@ -44,15 +45,15 @@
             </composable_node>
 
             <!-- PCD Exporter -->
-            <composable_node pkg="pcl_ros" plugin="pcl_ros::PointCloudToPCD" name="peak_pointcloud_to_pcd" if="$(var export_pcd)">
+            <composable_node pkg="pcl_ros" plugin="pcl_ros::PointCloudToPCD" name="pointcloud_to_pcd" if="$(var export_pcd)">
                 <remap from="input" to="/peak/detections" />
-                <param name="prefix" value="$(find-pkg-share peak_ros)/bags/" />
+                <param name="prefix" value="$(var logging_path)/" />
             </composable_node>
 
         </node_container>
 
         <!-- Logging -->
-        <executable cmd="ros2 bag record --repeat-latched -b 1024 -o $(find-pkg-share peak_ros)/bags/$(var rosbag_name) /tf /peak/a_scans /peak/b_scan /peak/gated_b_scan /peak/detections /iiwa/state/CartesianWrench" if="$(var logging)" output="screen"/>
+        <executable cmd="ros2 bag record -o $(var logging_path)/$(var rosbag_name)_$(eval '__import__(&quot;datetime&quot;).datetime.now().strftime(&quot;%Y_%m_%d-%H_%M_%S&quot;)') --topics /tf /peak/a_scans /peak/b_scan /peak/gated_b_scan /peak/detections /robot_description" if="$(var logging)" output="screen"/>
         
     </group>
 

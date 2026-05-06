@@ -1,79 +1,51 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
     <arg name="configuration" default="offline.yaml" />
-
-    <!-- <arg name="ros_bag" default="peak_recording_2025-05-20-17-03-45.bag" /> -->
-    <!-- <arg name="ros_bag" default="peak_recording_2025-05-30-17-00-57.bag" /> -->
-    <!-- Full scan alternating -->
-    <arg name="ros_bag" default="peak_recording_2025-06-09-15-55-57.bag" />
-    <!-- Full scan non-alternating -->
-    <!-- <arg name="ros_bag" default="peak_recording_2025-06-06-12-59-50.bag" /> -->
-
+    <arg name="configuration_path" default="$(find-pkg-share peak_ros)/config/$(var configuration)" />
+    <arg name="ros_bag" />
     <arg name="export_pcd" default="false" />
     <arg name="logging" default="false" />
+    <arg name="logging_path" default="." />
     <arg name="rosbag_name" default="peak_recording" />
 
     <arg name="rviz" default="true" />
 
-    <group ns="peak">
-        <!-- Configuration -->
-        <group ns="settings">
-            <rosparam file="$(find peak_ros)/config/$(arg configuration)" command="load" />
-        </group>
+    <group>
+        <push_ros_namespace namespace="peak"/>
 
+        <node_container pkg="rclcpp_components" exec="component_container" name="container" namespace="">
+            <composable_node pkg="pcl_ros" plugin="pcl_ros::VoxelGrid" name="voxel_grid">
+                <remap from="input" to="gated_b_scan" />
+                <remap from="output" to="voxelised_gated_b_scan" />
+                <param name="filter_field_name" value="z"/>
+                <param name="filter_limit_min" value="0.0001"/>
+                <param name="filter_limit_max" value="0.05"/>
+                <param name="filter_limit_negative" value="False"/>
+                <param name="leaf_size" value="0.0001"/>
+                <param name="min_points_per_voxel" value="1"/>
+            </composable_node>
 
-        <node pkg="rosbag" type="play" name="rosbag_peak_play" args="$(find peak_ros)/bags/$(arg ros_bag) --topics /peak/b_scan /peak/gated_b_scan" />
+            <composable_node pkg="peak_ros" plugin="peak_ros::ReconstructionNodelet" name="reconstruction_node">
+                <remap from="input" to="voxelised_gated_b_scan" />
+                <remap from="output" to="detections" />
+                <param from="$(var configuration_path)" />
+            </composable_node>
 
+            <!-- PCD Exporter -->
+            <composable_node pkg="pcl_ros" plugin="pcl_ros::PointCloudToPCD" name="pointcloud_to_pcd" if="$(var export_pcd)">
+                <remap from="input" to="/peak/detections" />
+                <param name="prefix" value="$(var logging_path)/" />
+            </composable_node>
 
-        <!-- Nodelet Manager -->
-        <node pkg="nodelet" type="nodelet" name="peak_nodelet_manager" args="manager" output="screen" >
-            <param name="num_worker_threads" value="15" />
-        </node>
-
-
-        <!-- Voxel Nodelet
-             Threads:
-                1 subscriber
-                1 publisher
-                1 spin 
-            -->
-       <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid peak_nodelet_manager" output="screen">
-            <remap from="~input" to="gated_b_scan" />
-            <remap from="~output" to="voxelised_gated_b_scan" />
-            <rosparam>
-            filter_field_name: z
-            filter_limit_min: 0.0001
-            filter_limit_max: 0.05
-            filter_limit_negative: False
-            leaf_size: 0.0001
-            </rosparam>
-            <!-- leaf_size: 0.00005 -->
-        </node>
-
-
-        <!-- Reconstruction Nodelet
-             Threads:
-                1 subscriber
-                1 publisher
-                1 spin 
-            -->
-        <node pkg="nodelet" type="nodelet" name="reconstruction_nodelet" 
-              args="load peak_ros/reconstruction_nodelet peak_nodelet_manager" output="screen">
-            <remap from="input" to="voxelised_gated_b_scan" />
-            <remap from="output" to="detections" />
-        </node>
-
-
-        <!-- PCD Exporter -->
-        <node pkg="pcl_ros" type="pointcloud_to_pcd" name="peak_pointcloud_to_pcd" args="input:=/peak/detections _prefix:=$(find peak_ros)/bags/pp_full_" if="$(arg export_pcd)" />
-
+        </node_container>
 
         <!-- Logging -->
-        <node pkg="rosbag" type="record" name="rosbag_peak" args="record --repeat-latched -b 1024 -o $(find peak_ros)/bags/$(arg rosbag_name) /tf /peak/a_scans /peak/b_scan /peak/gated_b_scan /peak/detections /iiwa/state/CartesianWrench" if="$(arg logging)" />
+        <executable cmd="ros2 bag play $(var ros_bag) --topics /peak/b_scan /peak/gated_b_scan" />
+        <executable cmd="ros2 bag record -o $(var logging_path)/$(var rosbag_name)_$(eval '__import__(&quot;datetime&quot;).datetime.now().strftime(&quot;%Y_%m_%d-%H_%M_%S&quot;)') --topics /tf /peak/a_scans /peak/b_scan /peak/gated_b_scan /peak/detections /robot_description" if="$(var logging)" output="screen"/>
         
     </group>
 
     <!-- Rviz -->
-    <node pkg="rviz" type="rviz" name="rviz_peak" args="-d $(find peak_ros)/config/bscan.rviz" if="$(arg rviz)" />
+    <node pkg="rviz2" exec="rviz2" name="rviz_peak" args="-d $(find-pkg-share peak_ros)/config/bscan.rviz" if="$(var rviz)" />
 
 </launch>
