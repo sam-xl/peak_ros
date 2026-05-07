@@ -15,7 +15,7 @@ ReconstructionNodelet::ReconstructionNodelet(const rclcpp::NodeOptions &options)
   publisher_ =
       this->create_publisher<sensor_msgs::msg::PointCloud2>("output", 10);
 
-  publish_service_ = this->create_service<peak_ros::srv::StreamData>(
+  publish_service_ = this->create_service<std_srvs::srv::SetBool>(
       "publish_volume",
       std::bind(&ReconstructionNodelet::publishSrvCb, this,
                 std::placeholders::_1, std::placeholders::_2));
@@ -84,20 +84,14 @@ void ReconstructionNodelet::callback(
 }
 
 bool ReconstructionNodelet::publishSrvCb(
-    const peak_ros::srv::StreamData::Request::SharedPtr request,
-    peak_ros::srv::StreamData::Response::SharedPtr response) {
-  RCLCPP_INFO_STREAM(this->get_logger(), "Publish UT volume request received: "
-                                             << request->stream_data);
+    const std_srvs::srv::SetBool::Request::SharedPtr request,
+    std_srvs::srv::SetBool::Response::SharedPtr response) {
+  RCLCPP_INFO_STREAM(this->get_logger(), "Publish UT volume request received");
 
-  if (request->stream_data) {
-    publisher_->publish(point_cloud_);
-    RCLCPP_INFO_STREAM(this->get_logger(), "Published reconstruction");
-    response->success = true;
-    return true;
-  } else {
-    response->success = true;
-    return true;
-  }
+  publisher_->publish(point_cloud_);
+  RCLCPP_INFO_STREAM(this->get_logger(), "Published reconstruction");
+  response->success = true;
+  return true;
 }
 
 void ReconstructionNodelet::timerCb() {

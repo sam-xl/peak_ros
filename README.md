@@ -1,5 +1,3 @@
-[![docker_ci](https://github.com/sam-xl/peak_ros/actions/workflows/industrial_ci_action.yml/badge.svg)](https://github.com/sam-xl/peak_ros/actions/workflows/industrial_ci_action.yml)
-
 # peak_ros
 ROS2 driver for use with PEAK MicroPulse devices.
 
@@ -24,16 +22,19 @@ ros2 launch peak_ros capture.launch
 Call either of the services `/peak/take_single_measurement` or `/peak/stream_data`.
 
 ```bash
-ros2 service call /peak/take_single_measurement peak_ros/srv/TakeSingleMeasurement "take_single_measurement: true"
+ros2 service call /peak/take_single_measurement std_srvs/srv/Trigger {}
 ```
 
 ...or...
 
 ```bash
-ros2 service call /peak/stream_data peak_ros/srv/StreamData "stream_data: true"
+ros2 service call /peak/stream_data std_srvs/srv/SetBool "data: true"
 ```
 
 After this RViz ought to show the current b scan as a pointcloud on `/peak/b_scan`.
+Note that subscribing to the b scans (as opposed to the a scans in
+`/peak/a_scans`) may negatively impact the performance of the driver, depending on the
+size of the data.
 
 ![](assets/b_scan.png)
 
@@ -53,7 +54,7 @@ Furthermore the [export_pcd launch argument](peak_ros/launch/init.launch#L14) al
 
 
 ### Using Custom MPS files
-Currently this driver requires MPS files to contain the following directives in order to correctly parse data:
+Currently this driver requires MPS files with [MicroPulse commands](refs/PNL_1267_Issue_1_02_MicroPulse_Range_MP6_Command_Reference_Manual.pdf) to contain the following directives in order to correctly parse data:
 
 1. DOF - Needed to determine the resolution and size of the returned data (currently only 1 and 4 are supported)
 2. GATS - Needed to determine the length of each a scan

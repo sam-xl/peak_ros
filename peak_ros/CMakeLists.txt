@@ -19,8 +19,8 @@ find_package(ament_cmake REQUIRED)
 
 set(dependencies
   rclcpp
-  rosidl_default_generators
   std_msgs
+  std_srvs
   sensor_msgs
   geometry_msgs
   visualization_msgs
@@ -30,27 +30,12 @@ set(dependencies
   tf2_sensor_msgs
   ament_index_cpp
   rclcpp_components
+  peak_ros_interfaces
 )
 
 foreach(dep ${dependencies})
   find_package(${dep} REQUIRED)
 endforeach()
-
-################################################
-## Declare ROS messages, services and actions ##
-################################################
-
-## Generate messages in the 'msg' folder
-rosidl_generate_interfaces(
-  ${PROJECT_NAME}
-  "msg/Ascan.msg"
-  "msg/Observation.msg"
-  "srv/StreamData.srv"
-  "srv/TakeSingleMeasurement.srv"
-  "srv/SendCommand.srv"
-  DEPENDENCIES
-  std_msgs
-)
 
 ###########
 ## Build ##
@@ -70,11 +55,8 @@ ament_target_dependencies(${PROJECT_NAME}_lib
   ${dependencies}
 )
 
-rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
-
 target_link_libraries(${PROJECT_NAME}_lib
   PeakMicroPulseHandler
-  "${cpp_typesupport_target}"
 )
 
 ###############

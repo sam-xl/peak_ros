@@ -9,15 +9,14 @@
 #include <sensor_msgs/msg/point_field.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <std_msgs/msg/header.h>
+#include <std_srvs/srv/set_bool.hpp>
+#include <std_srvs/srv/trigger.hpp>
 
 #include "PeakMicroPulseHandler/peak_handler.h"
 
-#include "peak_ros/msg/ascan.hpp"
-#include "peak_ros/msg/observation.hpp"
-
-#include "peak_ros/srv/send_command.hpp"
-#include "peak_ros/srv/stream_data.hpp"
-#include "peak_ros/srv/take_single_measurement.hpp"
+#include "peak_ros_interfaces/msg/ascan.hpp"
+#include "peak_ros_interfaces/msg/observation.hpp"
+#include "peak_ros_interfaces/srv/send_command.hpp"
 
 namespace peak_ros {
 
@@ -35,18 +34,18 @@ private:
   void prePopulateBScanMessage();
   void prePopulateGatedBScanMessage();
   void sendCommand(const std::string &cmd);
+  bool streamDataSrvCb(const std_srvs::srv::SetBool::Request::SharedPtr request,
+                       std_srvs::srv::SetBool::Response::SharedPtr response);
   bool
-  streamDataSrvCb(const peak_ros::srv::StreamData::Request::SharedPtr request,
-                  peak_ros::srv::StreamData::Response::SharedPtr response);
-  bool takeMeasurementSrvCb(
-      const peak_ros::srv::TakeSingleMeasurement::Request::SharedPtr request,
-      peak_ros::srv::TakeSingleMeasurement::Response::SharedPtr response);
-  bool
-  sendCommandSrvCb(const peak_ros::srv::SendCommand::Request::SharedPtr request,
-                   peak_ros::srv::SendCommand::Response::SharedPtr response);
+  takeMeasurementSrvCb(const std_srvs::srv::Trigger::Request::SharedPtr request,
+                       std_srvs::srv::Trigger::Response::SharedPtr response);
+  bool sendCommandSrvCb(
+      const peak_ros_interfaces::srv::SendCommand::Request::SharedPtr request,
+      peak_ros_interfaces::srv::SendCommand::Response::SharedPtr response);
   void takeMeasurement();
   void populateAScanMessage();
-  void populateBScanMessage(const peak_ros::msg::Observation &obs_msg);
+  void
+  populateBScanMessage(const peak_ros_interfaces::msg::Observation &obs_msg);
   void timerCb();
 
   void
@@ -89,21 +88,22 @@ private:
   const PeakHandler::OutputFormat *ltpa_data_ptr_;
 
   // Output
-  peak_ros::msg::Observation ltpa_msg_;
+  peak_ros_interfaces::msg::Observation ltpa_msg_;
   sensor_msgs::msg::PointCloud2 bscan_cloud_;
   sensor_msgs::msg::PointCloud2 gated_bscan_cloud_;
 
   bool stream_;
 
-  rclcpp::Publisher<peak_ros::msg::Observation>::SharedPtr ascan_publisher_;
+  rclcpp::Publisher<peak_ros_interfaces::msg::Observation>::SharedPtr
+      ascan_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr bscan_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr
       gated_bscan_publisher_;
 
-  rclcpp::Service<peak_ros::srv::TakeSingleMeasurement>::SharedPtr
-      single_measure_service_;
-  rclcpp::Service<peak_ros::srv::StreamData>::SharedPtr stream_service_;
-  rclcpp::Service<peak_ros::srv::SendCommand>::SharedPtr send_command_service_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr single_measure_service_;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr stream_service_;
+  rclcpp::Service<peak_ros_interfaces::srv::SendCommand>::SharedPtr
+      send_command_service_;
 
   rclcpp::TimerBase::SharedPtr timer_;
 
