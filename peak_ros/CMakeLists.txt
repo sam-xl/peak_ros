@@ -47,6 +47,7 @@ include_directories(
 
 add_library(
   ${PROJECT_NAME}_lib
+  SHARED
   src/peak_nodelet.cpp
   src/reconstruction_nodelet.cpp
 )

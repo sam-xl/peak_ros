@@ -15,6 +15,8 @@ colcon build
 
 ## Usage
 
+### Capture
+
 ```bash
 ros2 launch peak_ros capture.launch
 ```
@@ -42,8 +44,20 @@ If you set appropriate gate parameters in the [config file](peak_ros/config/defa
 
 ![](assets/gated_b_scan.png)
 
+### Reconstruction
 
-### Reconstructions in A Fixed External Frame with TF
+
+```bash
+ros2 launch peak_ros bringup.launch
+```
+
+and then enable streaming
+
+```bash
+ros2 service call /peak/stream_data std_srvs/srv/SetBool "data: true"
+```
+
+#### Reconstructions in A Fixed External Frame with TF
 The [reconstruction configuration parameters](peak_ros/config/default.yaml#L47-L50) allow for live reconstruction of the gated ultrasound observations in an external fixed frame.
 
 ![](assets/live_recon.png)
@@ -52,6 +66,21 @@ Furthermore the [export_pcd launch argument](peak_ros/launch/init.launch#L14) al
 
 ![](assets/pcd.png)
 
+### Postprocessing
+
+If you saved a bagfile using
+
+```bash
+ros2 launch peak_ros bringup.launch logging:=true
+```
+
+you can postprocess the captured data by running
+
+```bash
+ros2 launch peak_ros post_process.launch ros_bag:=BAGFILE
+```
+
+where BAGFILE is the name of the bagfile you wish to postprocesss.
 
 ### Using Custom MPS files
 Currently this driver requires MPS files with [MicroPulse commands](refs/PNL_1267_Issue_1_02_MicroPulse_Range_MP6_Command_Reference_Manual.pdf) to contain the following directives in order to correctly parse data:
