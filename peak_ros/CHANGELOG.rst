@@ -2,8 +2,8 @@
 Changelog for peak_ros
 ^^^^^^^^^^^^^^^^^^^^^^
 
-0.1.0 (forthcoming)
--------------------
+0.1.0 (2026-05-11)
+------------------
 - Ported to ROS2 Jazzy
 - Added send_command service
 - Implemented as ROS2 Components
