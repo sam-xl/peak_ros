@@ -11,7 +11,7 @@ include(FetchContent)
 FetchContent_Declare(
   peak_micropulse
   GIT_REPOSITORY https://github.com/sam-xl/peak_micropulse_driver
-  GIT_TAG        NXT03-668/fix-ltpa-lockup
+  GIT_TAG        2fb18bd502d0f56db675a95f5e29d91915111814 # ==NXT03-668/fix-ltpa-lockup on 2026-05-11
 )
 FetchContent_MakeAvailable(peak_micropulse)
 

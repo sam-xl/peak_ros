@@ -8,7 +8,7 @@
   <author email="matthew@todo.todo">Matthew Shields</author>
   <maintainer email="w.caarls@tudelft.nl">Wouter Caarls / SAM XL</maintainer>
 
-  <license>TODO</license>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>std_msgs</depend>

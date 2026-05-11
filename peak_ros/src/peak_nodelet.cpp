@@ -562,6 +562,12 @@ void PeakNodelet::postSetParametersCallback(
   bool send_gate = false;
 
   for (const auto &param : parameters) {
+    if (param.as_int() == -1)
+    {
+      // -1 means don't overwrite parameter
+      continue;
+    }
+  
     if (param.get_name() == "ltpa.gate.start") {
       ltpa_gate_start_ = std::max(param.as_int(), 0L);
       send_gate = true;

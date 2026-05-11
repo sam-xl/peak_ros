@@ -112,7 +112,7 @@ Maximum pulse repetition frequency.
 ## Bugs and Feature Requests
 Please report bugs and request features using the [Issue Tracker](https://github.com/sam-xl/peak_ros/issues).
 
-# Authors
+## Authors
 The driver and ROS node were written by [Matthew Shields](https://github.com/MShields1986).
 The port to ROS 2 and further enhancements were written by [SAM XL](https://github.com/sam-xl).
 
