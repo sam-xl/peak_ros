@@ -1,14 +1,11 @@
 #include "peak_ros/peak_nodelet.h"
 
-namespace peak_namespace {
+namespace peak_ros {
 
-PeakNodelet::PeakNodelet()
-    : rclcpp::Node("peak_node"), peak_handler_(), stream_(false) {
-  RCLCPP_INFO_STREAM(this->get_logger(),
-                     node_name_ << ": Initialising node...");
+PeakNodelet::PeakNodelet(const rclcpp::NodeOptions &options)
+    : rclcpp::Node("peak_node", options), peak_handler_(), stream_(false) {
+  RCLCPP_INFO_STREAM(this->get_logger(), "Initialising node...");
 
-  node_name_ = get_name();
-  ns_ = get_namespace();
   peak_handler_.setup(
       PeakNodelet::paramHandler("acquisition_rate", acquisition_rate_),
       PeakNodelet::paramHandler("peak_address", peak_address_),
@@ -22,6 +19,7 @@ PeakNodelet::PeakNodelet()
 
   PeakNodelet::paramHandler("digitisation_rate", digitisation_rate_);
   PeakNodelet::paramHandler("profile", profile_);
+  PeakNodelet::paramHandler("center_frame", center_frame_);
 
   PeakNodelet::paramHandler("tcg.use_tcg", use_tcg_);
   PeakNodelet::paramHandler("tcg.amp_factor", amp_factor_);
@@ -44,34 +42,45 @@ PeakNodelet::PeakNodelet()
   prePopulateBScanMessage();
   prePopulateGatedBScanMessage();
 
+  param_cb_handle_ = add_post_set_parameters_callback(std::bind(
+      &PeakNodelet::postSetParametersCallback, this, std::placeholders::_1));
+
+  // Hardware parameters. They default to -1, which means don't
+  // overwrite the values defined in the .mps file
+  PeakNodelet::paramHandler("ltpa.gate.start", ltpa_gate_start_);
+  PeakNodelet::paramHandler("ltpa.gate.end", ltpa_gate_end_);
+  PeakNodelet::paramHandler("ltpa.delay", ltpa_delay_);
+  PeakNodelet::paramHandler("ltpa.gain", ltpa_gain_);
+  PeakNodelet::paramHandler("ltpa.prf", ltpa_prf_);
+
   ascan_publisher_ =
-      this->create_publisher<peak_ros::msg::Observation>(ns_ + "/a_scans", 100);
-  bscan_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-      ns_ + "/b_scan", 100);
+      this->create_publisher<peak_ros_interfaces::msg::Observation>("a_scans",
+                                                                    100);
+  bscan_publisher_ =
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("b_scan", 100);
   gated_bscan_publisher_ =
-      this->create_publisher<sensor_msgs::msg::PointCloud2>(
-          ns_ + "/gated_b_scan", 100);
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("gated_b_scan",
+                                                            100);
 
-  single_measure_service_ =
-      this->create_service<peak_ros::srv::TakeSingleMeasurement>(
-          ns_ + "/take_single_measurement",
-          std::bind(&PeakNodelet::takeMeasurementSrvCb, this,
-                    std::placeholders::_1, std::placeholders::_2));
-  stream_service_ = this->create_service<peak_ros::srv::StreamData>(
-      ns_ + "/stream_data",
-      std::bind(&PeakNodelet::streamDataSrvCb, this, std::placeholders::_1,
+  single_measure_service_ = this->create_service<std_srvs::srv::Trigger>(
+      "take_single_measurement",
+      std::bind(&PeakNodelet::takeMeasurementSrvCb, this, std::placeholders::_1,
                 std::placeholders::_2));
+  stream_service_ = this->create_service<std_srvs::srv::SetBool>(
+      "stream_data", std::bind(&PeakNodelet::streamDataSrvCb, this,
+                               std::placeholders::_1, std::placeholders::_2));
 
-  send_command_service_ = this->create_service<peak_ros::srv::SendCommand>(
-      ns_ + "/send_command",
-      std::bind(&PeakNodelet::sendCommandSrvCb, this, std::placeholders::_1,
-                std::placeholders::_2));
+  send_command_service_ =
+      this->create_service<peak_ros_interfaces::srv::SendCommand>(
+          "send_command",
+          std::bind(&PeakNodelet::sendCommandSrvCb, this, std::placeholders::_1,
+                    std::placeholders::_2));
 
   timer_ = this->create_wall_timer(
       std::chrono::nanoseconds(1000000000 / acquisition_rate_),
       std::bind(&PeakNodelet::timerCb, this));
 
-  RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Node initialised");
+  RCLCPP_INFO_STREAM(this->get_logger(), "Node initialised");
 }
 
 // PeakNodelet::~PeakNodelet() {
@@ -86,24 +95,22 @@ ParamType PeakNodelet::paramHandler(std::string param_name,
     param_value = this->declare_parameter(param_name, param_value);
   }
 
-  RCLCPP_INFO_STREAM(this->get_logger(), node_name_ << ": Read in parameter "
-                                                    << param_name << " = "
-                                                    << param_value);
+  RCLCPP_INFO_STREAM(this->get_logger(), "Read in parameter " << param_name
+                                                              << " = "
+                                                              << param_value);
 
   return param_value;
 }
 
 void PeakNodelet::initHardware() {
-  RCLCPP_INFO_STREAM(this->get_logger(),
-                     node_name_ << ": Initialising Peak hardware...");
+  RCLCPP_INFO_STREAM(this->get_logger(), "Initialising Peak hardware...");
 
   peak_handler_.connect();
   peak_handler_.sendReset(digitisation_rate_);
   peak_handler_.readMpsFile();
   peak_handler_.sendMpsConfiguration();
 
-  RCLCPP_INFO_STREAM(this->get_logger(),
-                     node_name_ << ": Peak hardware initialised");
+  RCLCPP_INFO_STREAM(this->get_logger(), "Peak hardware initialised");
 }
 
 void PeakNodelet::prePopulateAScanMessage() {
@@ -187,12 +194,11 @@ void PeakNodelet::prePopulateGatedBScanMessage() {
 }
 
 bool PeakNodelet::streamDataSrvCb(
-    const peak_ros::srv::StreamData::Request::SharedPtr request,
-    peak_ros::srv::StreamData::Response::SharedPtr response) {
-  RCLCPP_INFO_STREAM(this->get_logger(), node_name_
-                                             << ": Streaming request received: "
-                                             << request->stream_data);
-  if (request->stream_data) {
+    const std_srvs::srv::SetBool::Request::SharedPtr request,
+    std_srvs::srv::SetBool::Response::SharedPtr response) {
+  RCLCPP_INFO_STREAM(this->get_logger(),
+                     "Streaming request received: " << request->data);
+  if (request->data) {
     stream_ = true;
     response->success = true;
     return true;
@@ -204,40 +210,33 @@ bool PeakNodelet::streamDataSrvCb(
 }
 
 bool PeakNodelet::takeMeasurementSrvCb(
-    const peak_ros::srv::TakeSingleMeasurement::Request::SharedPtr request,
-    peak_ros::srv::TakeSingleMeasurement::Response::SharedPtr response) {
+    const std_srvs::srv::Trigger::Request::SharedPtr request,
+    std_srvs::srv::Trigger::Response::SharedPtr response) {
   RCLCPP_INFO_STREAM(this->get_logger(),
-                     node_name_
-                         << ": Take single measurement request received: "
-                         << request->take_single_measurement);
-  if (request->take_single_measurement) {
-    takeMeasurement();
-    response->success = true;
-    return true;
-  } else {
-    response->success = false;
-    return true;
-  }
+                     "Take single measurement request received");
+  takeMeasurement();
+  response->success = true;
+  return true;
 }
 
-bool PeakNodelet::sendCommandSrvCb(
-    const peak_ros::srv::SendCommand::Request::SharedPtr request,
-    peak_ros::srv::SendCommand::Response::SharedPtr response) {
-  RCLCPP_INFO_STREAM(this->get_logger(),
-                     node_name_
-                         << ": Sending command: "
-                         << request->command);
-  peak_handler_.sendCommand(request->command);
+void PeakNodelet::sendCommand(const std::string &cmd) {
+  RCLCPP_INFO_STREAM(this->get_logger(), "Sending command: " << cmd);
+  peak_handler_.sendCommand(cmd);
 
   // Update packet length if necessary
-  if (request->command.rfind("GATS", 0) == 0)
-  {
-    peak_handler_.setGates(request->command);
+  if (cmd.rfind("GATS", 0) == 0) {
+    peak_handler_.setGates(cmd);
     peak_handler_.calcPacketLength();
     prePopulateAScanMessage();
     prePopulateBScanMessage();
     prePopulateGatedBScanMessage();
   }
+}
+
+bool PeakNodelet::sendCommandSrvCb(
+    const peak_ros_interfaces::srv::SendCommand::Request::SharedPtr request,
+    peak_ros_interfaces::srv::SendCommand::Response::SharedPtr response) {
+  sendCommand(request->command);
 
   response->success = true;
   return true;
@@ -299,7 +298,10 @@ void PeakNodelet::takeMeasurement() {
     }
 
     // ~12ms
-    populateBScanMessage(ltpa_msg_);
+    if (bscan_publisher_->get_subscription_count() ||
+        gated_bscan_publisher_->get_subscription_count()) {
+      populateBScanMessage(ltpa_msg_);
+    }
 
     if (profile_) {
       end_4 = std::chrono::high_resolution_clock::now();
@@ -346,7 +348,7 @@ void PeakNodelet::populateAScanMessage() {
   ltpa_msg_.ascans.clear();
 
   for (auto ascan : ltpa_data_ptr_->ascans) {
-    peak_ros::msg::Ascan ascan_msg;
+    peak_ros_interfaces::msg::Ascan ascan_msg;
     ascan_msg.count = ascan.header.count;
     ascan_msg.test_number = ascan.header.testNo;
     ascan_msg.dof = ascan.header.dof;
@@ -359,7 +361,7 @@ void PeakNodelet::populateAScanMessage() {
 }
 
 void PeakNodelet::populateBScanMessage(
-    const peak_ros::msg::Observation &obs_msg) {
+    const peak_ros_interfaces::msg::Observation &obs_msg) {
   bscan_cloud_.header.stamp = obs_msg.header.stamp;
   bscan_cloud_.header.frame_id = obs_msg.header.frame_id;
   bscan_cloud_.width = obs_msg.ascan_length * obs_msg.num_ascans;
@@ -409,6 +411,11 @@ void PeakNodelet::populateBScanMessage(
   float tof;
 
   int element_i = 0;
+  float offset = 0;
+  if (center_frame_) {
+    // Publish with center of probe in center of frame, if desired
+    offset = obs_msg.element_pitch * (obs_msg.num_ascans - 1) / 2000.0f;
+  }
 
   for (const auto &ascan : obs_msg.ascans) {
     bool found_front_wall = false;
@@ -437,8 +444,8 @@ void PeakNodelet::populateBScanMessage(
       // }
 
       x = 0.0f;
-      y = (float)((float)element_i * (float)obs_msg.element_pitch *
-                  0.001f); // mm to m
+      y = (float)((float)element_i * (float)obs_msg.element_pitch * 0.001f) -
+          offset; // mm to m
       z = (float)((float)i * (float)obs_msg.vel_material * dt / 2.0f);
 
       if (use_tcg_ and z > (10.0f * 0.001f)) { // TODO: Param for skipping x mm
@@ -539,15 +546,54 @@ void PeakNodelet::populateBScanMessage(
 
 void PeakNodelet::timerCb() {
   RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 600000,
-                              node_name_ << ": Node running");
+                              "Node running");
   if (stream_) {
     RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 60000,
-                                node_name_ << ": Streaming data...");
+                                "Streaming data...");
     takeMeasurement();
   } else {
     RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 60000,
-                                node_name_ << ": Not streaming data...");
+                                "Not streaming data...");
   }
 }
 
-} // namespace peak_namespace
+void PeakNodelet::postSetParametersCallback(
+    const std::vector<rclcpp::Parameter> &parameters) {
+  bool send_gate = false;
+
+  for (const auto &param : parameters) {
+    if (param.get_name() == "ltpa.gate.start") {
+      ltpa_gate_start_ = std::max(param.as_int(), 0L);
+      send_gate = true;
+    } else if (param.get_name() == "ltpa.gate.end") {
+      ltpa_gate_end_ = std::max(param.as_int(), 0L);
+      send_gate = true;
+    } else if (param.get_name() == "ltpa.delay") {
+      ltpa_delay_ = std::max(param.as_int(), 0L);
+      if (ltpa_delay_ != -1) {
+        sendCommand("DLYS 1 " + std::to_string(ltpa_delay_));
+      }
+    } else if (param.get_name() == "ltpa.gain") {
+      ltpa_gain_ = std::min(std::max(param.as_int(), 0L), 280L);
+      if (ltpa_gain_ != -1) {
+        sendCommand("GANS 1 " + std::to_string(ltpa_gain_));
+      }
+    } else if (param.get_name() == "ltpa.prf") {
+      ltpa_prf_ = std::min(std::max(param.as_int(), 1L), 20000L);
+      if (ltpa_prf_ != -1) {
+        sendCommand("PRF " + std::to_string(ltpa_prf_));
+      }
+    }
+  }
+
+  if (send_gate && ltpa_gate_start_ != -1 && ltpa_gate_end_ != -1) {
+    sendCommand("GATS 1 " + std::to_string(ltpa_gate_start_) + " " +
+                std::to_string(ltpa_gate_end_));
+  }
+}
+
+} // namespace peak_ros
+
+#include "rclcpp_components/register_node_macro.hpp"
+
+RCLCPP_COMPONENTS_REGISTER_NODE(peak_ros::PeakNodelet)

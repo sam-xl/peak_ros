@@ -6,6 +6,7 @@ peak/peak_node:
     acquisition_rate:        20
     digitisation_rate:      100 # 0, 10, 25, 50 or 100 (0 = use default)
     frame_id: "ltpa"
+    center_frame: true
 
     profile:              false     # Profiling output for PeakNodelet::takeMeasurement()
 
@@ -47,8 +48,8 @@ peak/peak_node:
 peak/reconstruction_node:
   ros__parameters:
     process_rate:          20 # Hz - Consider interplay between this and acquisition rates
-    use_tf:              false
-    recon_frame_id: "pcl_crop_box_2"
+    use_tf:              true
+    recon_frame_id:   "world"
     live_publish:        true
     recon_const_vel:     0.01
     flip_direction:      true

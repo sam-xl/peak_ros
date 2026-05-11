@@ -23,6 +23,6 @@ float64                         couplant_depth        # mm
 float64                         specimen_depth        # mm
 
 # LTPA Data
-peak_ros/Ascan[] ascans
+peak_ros_interfaces/Ascan[] ascans
 
 int32 max_amplitude

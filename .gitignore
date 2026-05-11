@@ -53,3 +53,10 @@ CATKIN_IGNORE
 *.bag
 *.csv
 src/peak_ltpa/bags
+
+# VSCode
+.vscode/
+
+# Local CI cache
+.gitlab-ci-local/
+.ci_cache/

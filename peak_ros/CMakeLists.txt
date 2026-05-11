@@ -10,8 +10,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include(FetchContent)
 FetchContent_Declare(
   peak_micropulse
-  GIT_REPOSITORY https://github.com/MShields1986/peak_micropulse_driver
-  GIT_TAG        feature/nodelet_compatibility
+  GIT_REPOSITORY https://github.com/sam-xl/peak_micropulse_driver
+  GIT_TAG        NXT03-668/fix-ltpa-lockup
 )
 FetchContent_MakeAvailable(peak_micropulse)
 
@@ -19,8 +19,8 @@ find_package(ament_cmake REQUIRED)
 
 set(dependencies
   rclcpp
-  rosidl_default_generators
   std_msgs
+  std_srvs
   sensor_msgs
   geometry_msgs
   visualization_msgs
@@ -29,27 +29,13 @@ set(dependencies
   tf2_ros
   tf2_sensor_msgs
   ament_index_cpp
+  rclcpp_components
+  peak_ros_interfaces
 )
 
 foreach(dep ${dependencies})
   find_package(${dep} REQUIRED)
 endforeach()
-
-################################################
-## Declare ROS messages, services and actions ##
-################################################
-
-## Generate messages in the 'msg' folder
-rosidl_generate_interfaces(
-  ${PROJECT_NAME}
-  "msg/Ascan.msg"
-  "msg/Observation.msg"
-  "srv/StreamData.srv"
-  "srv/TakeSingleMeasurement.srv"
-  "srv/SendCommand.srv"
-  DEPENDENCIES
-  std_msgs
-)
 
 ###########
 ## Build ##
@@ -61,6 +47,7 @@ include_directories(
 
 add_library(
   ${PROJECT_NAME}_lib
+  SHARED
   src/peak_nodelet.cpp
   src/reconstruction_nodelet.cpp
 )
@@ -73,30 +60,17 @@ target_link_libraries(${PROJECT_NAME}_lib
   PeakMicroPulseHandler
 )
 
-rosidl_target_interfaces(${PROJECT_NAME}_lib
-  ${PROJECT_NAME}
-  "rosidl_typesupport_cpp"
-)
-
 ###############
 # Peak Node #
 ###############
 
-add_executable(peak_node src/peak_node.cpp)
-
-target_link_libraries(peak_node
-  ${PROJECT_NAME}_lib
-)
+rclcpp_components_register_node(${PROJECT_NAME}_lib PLUGIN "peak_ros::PeakNodelet" EXECUTABLE peak_node)
 
 #######################
 # Reconstruction Node #
 #######################
 
-add_executable(reconstruction_node src/reconstruction_node.cpp)
-
-target_link_libraries(reconstruction_node
-  ${PROJECT_NAME}_lib
-)
+rclcpp_components_register_node(${PROJECT_NAME}_lib PLUGIN "peak_ros::ReconstructionNodelet" EXECUTABLE reconstruction_node)
 
 #############
 ## Install ##

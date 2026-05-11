@@ -10,36 +10,33 @@
 #include <sensor_msgs/msg/point_field.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <std_msgs/msg/header.h>
+#include <std_srvs/srv/set_bool.hpp>
 
 #include <tf2/transform_datatypes.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
-#include "peak_ros/srv/stream_data.hpp"
-
-namespace reconstruction_namespace {
+namespace peak_ros {
 
 class ReconstructionNodelet : public rclcpp::Node {
 public:
-  explicit ReconstructionNodelet();
+  explicit ReconstructionNodelet(const rclcpp::NodeOptions &options);
 
 private:
   template <typename ParamType>
   ParamType paramHandler(std::string param_name, ParamType &param_value);
   void initialisePointcloud();
   void callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
-  bool publishSrvCb(const peak_ros::srv::StreamData::Request::SharedPtr request,
-                    peak_ros::srv::StreamData::Response::SharedPtr response);
+  bool publishSrvCb(const std_srvs::srv::SetBool::Request::SharedPtr request,
+                    std_srvs::srv::SetBool::Response::SharedPtr response);
   void timerCb();
 
   int32_t rate_;
-  std::string node_name_;
-  std::string ns_;
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subscriber_;
 
-  rclcpp::Service<peak_ros::srv::StreamData>::SharedPtr publish_service_;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr publish_service_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
 
   rclcpp::TimerBase::SharedPtr timer_;
@@ -62,4 +59,4 @@ private:
   geometry_msgs::msg::TransformStamped trans_;
 };
 
-} // namespace reconstruction_namespace
+} // namespace peak_ros
