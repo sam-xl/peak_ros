@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+    <arg name="configuration" default="roller_probe_100_MHz.yaml" />
+    <arg name="configuration_path" default="$(find-pkg-share peak_ros)/config/$(var configuration)" />
+    <arg name="mps_file" default="composite_roller_probe/roller_probe_wing_cover_100_MHz.mps" />
+    <arg name="mps_path" default="$(find-pkg-share peak_ros)/mps/$(var mps_file)" />
+    <arg name="rviz" default="true" />
+
+    <group>
+        <push_ros_namespace namespace="peak"/>
+
+        <node pkg="peak_ros" exec="peak_node" name="peak_node">
+            <param name="mps_path" value="$(var mps_path)" />
+            <param from="$(var configuration_path)" />
+        </node>
+    </group>
+
+    <!-- Rviz -->   
+    <node pkg="rviz2" exec="rviz2" name="rviz_peak" args="-d $(find-pkg-share peak_ros)/config/bscan.rviz" if="$(var rviz)" />
+
+</launch>
