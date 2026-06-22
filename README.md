@@ -13,6 +13,17 @@ cd ..
 colcon build
 ```
 
+For acquisition speeds larger than a hundred Hz, it is necessary to
+build the package in Release mode. The recommended way of doing this is to
+build the entire workspace with build type `RelWithDebInfo` using a
+`colcon_defaults.yaml` in the workspace root:
+
+```yaml
+build:
+  cmake-args:
+    - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+```
+
 ## Usage
 
 ### Capture
